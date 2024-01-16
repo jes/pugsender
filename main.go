@@ -68,22 +68,9 @@ func run() {
 				}),
 				// then an input
 				layout.Rigid(func(gtx C) D {
-					return widget.Border{Width: 1, CornerRadius: 2, Color: th.Palette.ContrastFg}.Layout(gtx, func(gtx C) D {
-						ed := material.Editor(th, &editor, "")
-						ed.Font = gofont.Collection()[6].Font
-						return ed.Layout(gtx)
-					})
+					return drawMDI(th, gtx, &editor)
 				}),
 			)
-
-			// handle MDI input
-			for _, e := range editor.Events() {
-				switch e.(type) {
-				case widget.SubmitEvent:
-					fmt.Printf(" > [%s]\n", editor.Text())
-					editor.SetText("")
-				}
-			}
 
 			e.Frame(gtx.Ops)
 		case system.DestroyEvent:

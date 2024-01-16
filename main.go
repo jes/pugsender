@@ -6,11 +6,14 @@ import (
 	"os"
 
 	"gioui.org/app"
+	"gioui.org/font/gofont"
 	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/paint"
+	"gioui.org/text"
 	"gioui.org/unit"
+	"gioui.org/widget"
 	"gioui.org/widget/material"
 )
 
@@ -34,11 +37,16 @@ func run() {
 	th := material.NewTheme()
 	th.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
 	th.Palette.Bg = color.NRGBA{R: 0, G: 0, B: 0, A: 255}
-	th.Palette.ContrastBg = color.NRGBA{R: 0, G: 0, B: 0, A: 255}
+	th.Palette.ContrastBg = color.NRGBA{R: 75, G: 150, B: 150, A: 255}
 	th.Palette.Fg = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
-	th.Palette.ContrastFg = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
+	th.Palette.ContrastFg = color.NRGBA{R: 100, G: 255, B: 255, A: 255}
 
 	var ops op.Ops
+
+	editor := widget.Editor{
+		SingleLine: true,
+		Submit:     true,
+	}
 
 	for {
 		e := w.NextEvent()
@@ -50,14 +58,27 @@ func run() {
 			paint.Fill(&ops, th.Palette.Bg)
 
 			// ... UI goes here ...
-			layout.Flex{}.Layout(gtx,
+			layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 				layout.Flexed(1, func(gtx C) D {
 					return drawLabel(th, gtx)
 				}),
-				layout.Flexed(1, func(gtx C) D {
+				layout.Flexed(0.5, func(gtx C) D {
 					return drawImage(gtx, img)
 				}),
+				layout.Flexed(0.5, func(gtx C) D {
+					ed := material.Editor(th, &editor, "")
+					ed.Font = gofont.Collection()[6].Font
+					return ed.Layout(gtx)
+				}),
 			)
+
+			for _, e := range editor.Events() {
+				switch e.(type) {
+				case widget.SubmitEvent:
+					fmt.Printf(" > [%s]\n", editor.Text())
+					editor.SetText("")
+				}
+			}
 
 			e.Frame(gtx.Ops)
 		case system.DestroyEvent:

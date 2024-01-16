@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image/color"
 	"os"
 
@@ -13,7 +14,18 @@ import (
 	"gioui.org/widget/material"
 )
 
+type (
+	C = layout.Context
+	D = layout.Dimensions
+)
+
 func run() {
+	img, err := loadImage("pugs.png")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "open pugs.png: %v", err)
+		os.Exit(1)
+	}
+
 	w := app.NewWindow(
 		app.Title("G-code sender"),
 		app.Size(unit.Dp(800), unit.Dp(600)),
@@ -37,8 +49,14 @@ func run() {
 			paint.Fill(&ops, th.Palette.Bg)
 
 			// ... UI goes here ...
-			label := material.H1(th, "Hello, world!")
-			label.Layout(gtx)
+			layout.Flex{}.Layout(gtx,
+				layout.Flexed(1, func(gtx C) D {
+					return drawLabel(th, gtx)
+				}),
+				layout.Flexed(1, func(gtx C) D {
+					return drawImage(gtx, img)
+				}),
+			)
 
 			e.Frame(gtx.Ops)
 		case system.DestroyEvent:

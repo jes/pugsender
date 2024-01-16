@@ -9,11 +9,12 @@ import (
 	"gioui.org/widget"
 )
 
-func drawImage(gtx layout.Context, img image.Image) {
+func drawImage(gtx layout.Context, img image.Image) D {
 	im := widget.Image{
-		Src: paint.NewImageOp(img),
+		Src:   paint.NewImageOp(img),
+		Scale: 0.1,
 	}
-	im.Layout(gtx)
+	return im.Layout(gtx)
 }
 
 func loadImage(name string) (image.Image, error) {

@@ -57,21 +57,26 @@ func run() {
 			// fill with background colour
 			paint.Fill(&ops, th.Palette.Bg)
 
-			// ... UI goes here ...
 			layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+				// label at top
 				layout.Flexed(1, func(gtx C) D {
 					return drawLabel(th, gtx)
 				}),
+				// then an image
 				layout.Flexed(0.5, func(gtx C) D {
 					return drawImage(gtx, img)
 				}),
-				layout.Flexed(0.5, func(gtx C) D {
-					ed := material.Editor(th, &editor, "")
-					ed.Font = gofont.Collection()[6].Font
-					return ed.Layout(gtx)
+				// then an input
+				layout.Rigid(func(gtx C) D {
+					return widget.Border{Width: 1, CornerRadius: 2, Color: th.Palette.ContrastFg}.Layout(gtx, func(gtx C) D {
+						ed := material.Editor(th, &editor, "")
+						ed.Font = gofont.Collection()[6].Font
+						return ed.Layout(gtx)
+					})
 				}),
 			)
 
+			// handle MDI input
 			for _, e := range editor.Events() {
 				switch e.(type) {
 				case widget.SubmitEvent:

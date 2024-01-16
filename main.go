@@ -32,6 +32,7 @@ func run() {
 	)
 
 	th := material.NewTheme()
+	th.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
 	th.Palette.Bg = color.NRGBA{R: 0, G: 0, B: 0, A: 255}
 	th.Palette.ContrastBg = color.NRGBA{R: 0, G: 0, B: 0, A: 255}
 	th.Palette.Fg = color.NRGBA{R: 255, G: 255, B: 255, A: 255}

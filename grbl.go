@@ -18,15 +18,17 @@ type Grbl struct {
 	Wpos            V4d
 	PlannerSize     int
 	PlannerFree     int
-	Spindle         bool
+	SerialSize      int
+	SerialFree      int
 	SpindleCw       bool
-	SpindleSpeed    bool
+	SpindleCcw      bool
 	FloodCoolant    bool
 	MistCoolant     bool
 	FeedOverride    float64
 	RapidOverride   float64
 	SpindleOverride float64
 	FeedRate        float64
+	SpindleSpeed    float64
 	StatusUpdate    chan struct{}
 }
 
@@ -108,6 +110,29 @@ func (g *Grbl) ParseStatus(status string) {
 			g.Mpos = valv4d
 		} else if keylc == "wco" {
 			g.Wco = valv4d
+		} else if keylc == "ov" {
+			g.FeedOverride = valv4d.X
+			g.RapidOverride = valv4d.X
+			g.SpindleOverride = valv4d.X
+		} else if keylc == "a" {
+			g.SpindleCw = strings.Contains(val, "S")
+			g.SpindleCcw = strings.Contains(val, "C")
+			g.FloodCoolant = strings.Contains(val, "F")
+			g.MistCoolant = strings.Contains(val, "M")
+		} else if keylc == "bf" {
+			g.PlannerFree = int(valv4d.X)
+			g.SerialFree = int(valv4d.Y)
+			if g.PlannerFree > g.PlannerSize {
+				g.PlannerSize = g.PlannerFree
+			}
+			if g.SerialFree > g.SerialSize {
+				g.SerialSize = g.SerialFree
+			}
+		} else if keylc == "fs" {
+			g.FeedRate = valv4d.X
+			g.SpindleSpeed = valv4d.Y
+		} else {
+			fmt.Fprintf(os.Stderr, "unrecognised field: %s\n", key)
 		}
 	}
 

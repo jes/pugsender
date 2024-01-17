@@ -31,6 +31,7 @@ type Grbl struct {
 	SpindleOverride float64
 	FeedRate        float64
 	SpindleSpeed    float64
+	Probe           bool
 	StatusUpdate    chan struct{}
 	UpdateTime      time.Time
 }
@@ -137,6 +138,11 @@ func (g *Grbl) ParseStatus(status string) {
 		} else if keylc == "fs" { // feed/speed
 			g.FeedRate = valv4d.X
 			g.SpindleSpeed = valv4d.Y
+		} else if keylc == "f" { // feed rate
+			g.FeedRate = valv4d.X
+		} else if keylc == "pn" { // pins
+			g.Probe = strings.Contains(val, "P")
+			// XXX: when the probe is deactivated, grbl doesn't tell us, see https://github.com/gnea/grbl/issues/1242
 		} else {
 			fmt.Fprintf(os.Stderr, "unrecognised field: %s\n", key)
 		}

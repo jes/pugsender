@@ -15,6 +15,8 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+
+	"go.bug.st/serial"
 )
 
 type (
@@ -22,7 +24,7 @@ type (
 	D = layout.Dimensions
 )
 
-func run() {
+func run(g *Grbl) {
 	img, err := loadImage("pugs.png")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "open pugs.png: %v", err)
@@ -33,6 +35,13 @@ func run() {
 		app.Title("G-code sender"),
 		app.Size(unit.Dp(800), unit.Dp(600)),
 	)
+
+	go func() {
+		for {
+			<-g.StatusUpdate
+			w.Invalidate()
+		}
+	}()
 
 	th := material.NewTheme()
 	th.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
@@ -60,7 +69,7 @@ func run() {
 			layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 				// label at top
 				layout.Flexed(1, func(gtx C) D {
-					return drawLabel(th, gtx)
+					return drawLabel(th, gtx, g)
 				}),
 				// then an image
 				layout.Flexed(0.5, func(gtx C) D {
@@ -68,7 +77,7 @@ func run() {
 				}),
 				// then an input
 				layout.Rigid(func(gtx C) D {
-					return drawMDI(th, gtx, &editor)
+					return drawMDI(th, gtx, &editor, g)
 				}),
 			)
 
@@ -80,6 +89,15 @@ func run() {
 }
 
 func main() {
-	go run()
+	listSerial()
+	mode := &serial.Mode{BaudRate: 115200}
+	port, err := serial.Open("/dev/ttyUSB2", mode)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "open /dev/ttyUSB2: %v\n", err)
+		os.Exit(1)
+	}
+	g := NewGrbl(port)
+	go g.Monitor()
+	go run(g)
 	app.Main()
 }

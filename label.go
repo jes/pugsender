@@ -5,7 +5,7 @@ import (
 	"gioui.org/widget/material"
 )
 
-func drawLabel(th *material.Theme, gtx layout.Context) D {
-	label := material.H1(th, "Hello, world!")
+func drawLabel(th *material.Theme, gtx layout.Context, g *Grbl) D {
+	label := material.H1(th, g.Status)
 	return label.Layout(gtx)
 }

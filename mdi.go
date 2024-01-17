@@ -9,11 +9,12 @@ import (
 	"gioui.org/widget/material"
 )
 
-func drawMDI(th *material.Theme, gtx layout.Context, editor *widget.Editor) D {
+func drawMDI(th *material.Theme, gtx layout.Context, editor *widget.Editor, g *Grbl) D {
 	// handle MDI input
 	for _, e := range editor.Events() {
 		switch e.(type) {
 		case widget.SubmitEvent:
+			g.Write([]byte(editor.Text() + "\n"))
 			fmt.Printf(" > [%s]\n", editor.Text())
 			editor.SetText("")
 		}

@@ -13,9 +13,9 @@ type Grbl struct {
 	SerialPort      io.ReadWriteCloser
 	Closed          bool
 	Status          string
-	Wco             [4]float32
-	Mpos            [4]float32
-	Wpos            [4]float32
+	Wco             V4d
+	Mpos            V4d
+	Wpos            V4d
 	PlannerSize     int
 	PlannerFree     int
 	Spindle         bool
@@ -23,16 +23,17 @@ type Grbl struct {
 	SpindleSpeed    bool
 	FloodCoolant    bool
 	MistCoolant     bool
-	FeedOverride    float32
-	RapidOverride   float32
-	SpindleOverride float32
-	FeedRate        float32
+	FeedOverride    float64
+	RapidOverride   float64
+	SpindleOverride float64
+	FeedRate        float64
 	StatusUpdate    chan struct{}
 }
 
 func NewGrbl(port io.ReadWriteCloser) *Grbl {
 	return &Grbl{
-		SerialPort: port,
+		SerialPort:   port,
+		StatusUpdate: make(chan struct{}),
 	}
 }
 
@@ -71,10 +72,54 @@ func (g *Grbl) Monitor() {
 		fmt.Println(scanner.Text())
 		if strings.HasPrefix(line, "<") && strings.HasSuffix(line, ">") {
 			// status update
-			status := strings.Trim(line, "<>")
-			parts := strings.Split(status, "|")
-			g.Status = parts[0]
+			g.ParseStatus(line)
 		}
 	}
 	g.Closed = true
+}
+
+// "status" should be a status report line from Grbl
+func (g *Grbl) ParseStatus(status string) {
+	status = strings.Trim(status, "<>")
+	parts := strings.Split(status, "|")
+	g.Status = parts[0]
+
+	// grbl in theory should give us either a wpos or an mpos
+	// every time, but track them separately just in case
+	givenWpos := false
+	givenMpos := false
+
+	for _, part := range parts[1:] {
+		keyval := strings.SplitN(part, ":", 2)
+		if len(keyval) != 2 {
+			fmt.Fprintf(os.Stderr, "unrecognised status item [%s]\n", part)
+			continue
+		}
+		key := keyval[0]
+		keylc := strings.ToLower(key)
+		val := keyval[1]
+		valv4d, _ := ParseV4d(val)
+
+		if keylc == "wpos" {
+			givenWpos = true
+			g.Wpos = valv4d
+		} else if keylc == "mpos" {
+			givenMpos = true
+			g.Mpos = valv4d
+		} else if keylc == "wco" {
+			g.Wco = valv4d
+		}
+	}
+
+	if givenMpos {
+		g.Wpos = g.Mpos.Add(g.Wco)
+	} else if givenWpos {
+		g.Mpos = g.Wpos.Sub(g.Wco)
+	}
+
+	g.Invalidate()
+}
+
+func (g *Grbl) Invalidate() {
+	g.StatusUpdate <- struct{}{}
 }

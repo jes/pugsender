@@ -42,3 +42,11 @@ func (a V4d) Add(b V4d) V4d {
 func (a V4d) Sub(b V4d) V4d {
 	return V4d{X: a.X - b.X, Y: a.Y - b.Y, Z: a.Z - b.Z, A: a.A - b.A}
 }
+
+func (a V4d) Mul(k float64) V4d {
+	return V4d{X: a.X * k, Y: a.Y * k, Z: a.Z * k, A: a.Z * k}
+}
+
+func (a V4d) Div(k float64) V4d {
+	return a.Mul(1 / k)
+}

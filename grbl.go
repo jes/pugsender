@@ -16,6 +16,8 @@ type Grbl struct {
 	Wco             V4d
 	Mpos            V4d
 	Wpos            V4d
+	Dtg             V4d // TODO: how can we calculate this?
+	Vel             V4d
 	PlannerSize     int
 	PlannerFree     int
 	SerialSize      int
@@ -30,6 +32,7 @@ type Grbl struct {
 	FeedRate        float64
 	SpindleSpeed    float64
 	StatusUpdate    chan struct{}
+	UpdateTime      time.Time
 }
 
 func NewGrbl(port io.ReadWriteCloser) *Grbl {
@@ -82,6 +85,9 @@ func (g *Grbl) Monitor() {
 
 // "status" should be a status report line from Grbl
 func (g *Grbl) ParseStatus(status string) {
+	prevWpos := g.Wpos
+	prevUpdateTime := g.UpdateTime
+
 	status = strings.Trim(status, "<>")
 	parts := strings.Split(status, "|")
 	g.Status = parts[0]
@@ -102,24 +108,24 @@ func (g *Grbl) ParseStatus(status string) {
 		val := keyval[1]
 		valv4d, _ := ParseV4d(val)
 
-		if keylc == "wpos" {
+		if keylc == "wpos" { // work position
 			givenWpos = true
 			g.Wpos = valv4d
-		} else if keylc == "mpos" {
+		} else if keylc == "mpos" { // machine position
 			givenMpos = true
 			g.Mpos = valv4d
-		} else if keylc == "wco" {
+		} else if keylc == "wco" { // work coordinate offset
 			g.Wco = valv4d
-		} else if keylc == "ov" {
+		} else if keylc == "ov" { // overrides
 			g.FeedOverride = valv4d.X
 			g.RapidOverride = valv4d.X
 			g.SpindleOverride = valv4d.X
-		} else if keylc == "a" {
+		} else if keylc == "a" { // accessories
 			g.SpindleCw = strings.Contains(val, "S")
 			g.SpindleCcw = strings.Contains(val, "C")
 			g.FloodCoolant = strings.Contains(val, "F")
 			g.MistCoolant = strings.Contains(val, "M")
-		} else if keylc == "bf" {
+		} else if keylc == "bf" { // buffers
 			g.PlannerFree = int(valv4d.X)
 			g.SerialFree = int(valv4d.Y)
 			if g.PlannerFree > g.PlannerSize {
@@ -128,7 +134,7 @@ func (g *Grbl) ParseStatus(status string) {
 			if g.SerialFree > g.SerialSize {
 				g.SerialSize = g.SerialFree
 			}
-		} else if keylc == "fs" {
+		} else if keylc == "fs" { // feed/speed
 			g.FeedRate = valv4d.X
 			g.SpindleSpeed = valv4d.Y
 		} else {
@@ -142,9 +148,11 @@ func (g *Grbl) ParseStatus(status string) {
 		g.Mpos = g.Wpos.Sub(g.Wco)
 	}
 
-	g.Invalidate()
-}
+	g.UpdateTime = time.Now()
 
-func (g *Grbl) Invalidate() {
+	distanceMoved := g.Wpos.Sub(prevWpos)
+	g.Vel = distanceMoved.Div(g.UpdateTime.Sub(prevUpdateTime).Seconds())
+	fmt.Println("vel = %v", g.Vel)
+
 	g.StatusUpdate <- struct{}{}
 }

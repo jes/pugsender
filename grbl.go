@@ -51,6 +51,8 @@ func NewGrbl(port io.ReadWriteCloser, portName string) *Grbl {
 
 // implements io.Writer
 func (g *Grbl) Write(p []byte) (n int, err error) {
+	// TODO: is there a race condition where concurrent writes can end up interleaved?
+	os.Stdout.Write(p)
 	return g.SerialPort.Write(p)
 }
 

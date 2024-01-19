@@ -50,6 +50,7 @@ type App struct {
 	mode        Mode
 	modeStack   []Mode
 	autoConnect bool
+	jog         JogControl
 
 	img image.Image
 	mdi *MDI
@@ -70,6 +71,7 @@ func NewApp() *App {
 		autoConnect: true,
 	}
 	a.mdi = NewMDI(a)
+	a.jog = NewJogControl(a)
 
 	var err error
 	a.img, err = loadImage("pugs.png")
@@ -87,6 +89,8 @@ func NewApp() *App {
 }
 
 func (a *App) Run() {
+	go a.jog.Run()
+
 	var ops op.Ops
 
 	for {
@@ -96,15 +100,29 @@ func (a *App) Run() {
 			gtx := layout.NewContext(&ops, e)
 
 			// handle keypresses
+			keystate := make(map[string]JogKeyState)
 			for _, gtxEvent := range gtx.Events(a) {
 				switch gtxE := gtxEvent.(type) {
 				case key.Event:
 					if gtxE.State == key.Press {
 						a.KeyPress(gtxE)
+						if v, ok := keystate[gtxE.Name]; ok && v == JogKeyRelease {
+							// XXX: if a key is released and then pressed in the same frame, we take it to be held; is this right?
+							keystate[gtxE.Name] = JogKeyHold
+						} else {
+							keystate[gtxE.Name] = JogKeyPress
+						}
 					} else if gtxE.State == key.Release {
-						a.KeyRelease(gtxE)
+						keystate[gtxE.Name] = JogKeyRelease
 					}
 				}
+			}
+
+			// update jog control
+			if a.mode == ModeJog {
+				a.jog.Update(keystate)
+			} else {
+				// TODO: some idempotent operation to cancel all jogging
 			}
 
 			// fill with background colour
@@ -236,35 +254,9 @@ func (a *App) KeyPress(e key.Event) {
 			// enter jog mode
 			a.PushMode(ModeJog)
 		}
-
-	} else if a.mode == ModeJog {
-		// JOG MODE
-		if e.Name == key.NameLeftArrow {
-			fmt.Println("left")
-			a.g.Write([]byte("$J=G91X-1F100\n"))
-		} else if e.Name == key.NameRightArrow {
-			a.g.Write([]byte("$J=G91X+1F100\n"))
-		} else if e.Name == key.NameDownArrow {
-			a.g.Write([]byte("$J=G91Y-1F100\n"))
-		} else if e.Name == key.NameUpArrow {
-			a.g.Write([]byte("$J=G91Y+1F100\n"))
-		} else if e.Name == key.NamePageDown {
-			a.g.Write([]byte("$J=G91Z-1F100\n"))
-		} else if e.Name == key.NamePageUp {
-			a.g.Write([]byte("$J=G91Z+1F100\n"))
-		}
 	}
 
 	if e.Name == key.NameEscape {
 		a.PopMode()
-	}
-}
-
-func (a *App) KeyRelease(e key.Event) {
-	if a.mode == ModeJog {
-		fmt.Println("release")
-		// if any key is released while jogging, cancel all jogging
-		// TODO: let them hold down up+left, and then only release up, and carry on jogging left
-		a.g.Write([]byte{0x85}) // 0x85 = Jog Cancel
 	}
 }

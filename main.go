@@ -72,7 +72,7 @@ func run(g *Grbl) {
 					return drawDRO(th, gtx, g)
 				}),
 				// then an image
-				layout.Flexed(0.5, func(gtx C) D {
+				layout.Rigid(func(gtx C) D {
 					return drawImage(gtx, img)
 				}),
 				// then an input

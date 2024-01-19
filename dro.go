@@ -31,7 +31,7 @@ func drawDRO(th *material.Theme, gtx C, g *Grbl) D {
 }
 
 func drawGrblStatus(th *material.Theme, gtx C, g *Grbl) D {
-	label := material.H1(th, g.Status)
+	label := material.H4(th, g.Status)
 	return label.Layout(gtx)
 }
 
@@ -50,7 +50,7 @@ func drawCoords(th *material.Theme, gtx C, g *Grbl) D {
 }
 
 func drawCoord(th *material.Theme, gtx C, name string, value float64) D {
-	label := material.H2(th, fmt.Sprintf("%s: %.03f", name, value))
+	label := material.H4(th, fmt.Sprintf("%s: %.03f", name, value))
 	return label.Layout(gtx)
 }
 
@@ -66,16 +66,16 @@ func drawFeedSpeed(th *material.Theme, gtx C, g *Grbl) D {
 }
 
 func drawGCodes(th *material.Theme, gtx C, g *Grbl) D {
-	label := material.H2(th, fmt.Sprintf("G0 G0 G0 G0"))
+	label := material.H4(th, fmt.Sprintf("G0 G0 G0 G0"))
 	return label.Layout(gtx)
 }
 
 func drawBufferState(th *material.Theme, gtx C, g *Grbl) D {
-	label := material.H2(th, fmt.Sprintf("Bf: %d/%d %d/%d", (g.PlannerSize-g.PlannerFree), g.PlannerSize, (g.SerialSize-g.SerialFree), g.SerialSize))
+	label := material.H4(th, fmt.Sprintf("Bf: %d/%d %d/%d", (g.PlannerSize-g.PlannerFree), g.PlannerSize, (g.SerialSize-g.SerialFree), g.SerialSize))
 	return label.Layout(gtx)
 }
 
 func drawGrblModes(th *material.Theme, gtx C, g *Grbl) D {
-	label := material.H2(th, fmt.Sprintf("[probe]"))
+	label := material.H4(th, fmt.Sprintf("[probe]"))
 	return label.Layout(gtx)
 }

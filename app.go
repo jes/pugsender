@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"os"
+	"strings"
 
 	"gioui.org/app"
 	"gioui.org/font/gofont"
@@ -100,6 +101,8 @@ func (a *App) Run() {
 				case key.Event:
 					if gtxE.State == key.Press {
 						a.KeyPress(gtxE)
+					} else if gtxE.State == key.Release {
+						a.KeyRelease(gtxE)
 					}
 				}
 			}
@@ -117,8 +120,11 @@ func (a *App) Run() {
 					Max: image.Point{gtx.Constraints.Max.X, gtx.Constraints.Max.Y},
 				},
 			).Push(gtx.Ops)
+			keys := []string{
+				"(Shift)-G", "(Shift)-M", "(Shift)-J", key.NameEscape, key.NameLeftArrow, key.NameRightArrow, key.NameUpArrow, key.NameDownArrow, key.NamePageUp, key.NamePageDown,
+			}
 			key.InputOp{
-				Keys: key.Set("(Shift)-G|(Shift)-M|" + key.NameEscape),
+				Keys: key.Set(strings.Join(keys, "|")),
 				Tag:  0, // Use Tag: 0 as the event routing tag, and retireve it through gtx.Events(0)
 			}.Add(gtx.Ops)
 			eventArea.Pop()
@@ -213,8 +219,9 @@ func (a *App) ResetMode(m Mode) {
 }
 
 func (a *App) KeyPress(e key.Event) {
-	if a.mode == ModeNormal {
+	if a.mode == ModeNormal || a.mode == ModeJog {
 		if e.Name == "G" || e.Name == "M" {
+			// enter MDI
 			if a.mdi.editor.Text() == "" {
 				a.mdi.editor.SetText(e.Name)
 				a.mdi.editor.SetCaret(1, 1)
@@ -224,7 +231,41 @@ func (a *App) KeyPress(e key.Event) {
 		}
 	}
 
+	if a.mode == ModeNormal {
+		// NORMAL MODE
+		if e.Name == "J" {
+			// enter jog mode
+			a.PushMode(ModeJog)
+		}
+
+	} else if a.mode == ModeJog {
+		// JOG MODE
+		if e.Name == key.NameLeftArrow {
+			fmt.Println("left")
+			a.g.Write([]byte("$J=G91X-1F100\n"))
+		} else if e.Name == key.NameRightArrow {
+			a.g.Write([]byte("$J=G91X+1F100\n"))
+		} else if e.Name == key.NameDownArrow {
+			a.g.Write([]byte("$J=G91Y-1F100\n"))
+		} else if e.Name == key.NameUpArrow {
+			a.g.Write([]byte("$J=G91Y+1F100\n"))
+		} else if e.Name == key.NamePageDown {
+			a.g.Write([]byte("$J=G91Z-1F100\n"))
+		} else if e.Name == key.NamePageUp {
+			a.g.Write([]byte("$J=G91Z+1F100\n"))
+		}
+	}
+
 	if e.Name == key.NameEscape {
 		a.PopMode()
+	}
+}
+
+func (a *App) KeyRelease(e key.Event) {
+	if a.mode == ModeJog {
+		fmt.Println("release")
+		// if any key is released while jogging, cancel all jogging
+		// TODO: let them hold down up+left, and then only release up, and carry on jogging left
+		a.g.Write([]byte{0x85}) // 0x85 = Jog Cancel
 	}
 }

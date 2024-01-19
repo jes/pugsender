@@ -92,7 +92,7 @@ func (g *Grbl) Monitor() {
 	scanner := bufio.NewScanner(g.SerialPort)
 	for scanner.Scan() {
 		line := scanner.Text()
-		//fmt.Println(scanner.Text())
+		fmt.Println(scanner.Text())
 		if strings.HasPrefix(line, "<") && strings.HasSuffix(line, ">") {
 			// status update
 			g.ParseStatus(line)
@@ -175,7 +175,6 @@ func (g *Grbl) ParseStatus(status string) {
 
 	distanceMoved := g.Wpos.Sub(prevWpos)
 	g.Vel = distanceMoved.Div(g.UpdateTime.Sub(prevUpdateTime).Seconds())
-	fmt.Println("vel = %v", g.Vel)
 
 	g.StatusUpdate <- struct{}{}
 }

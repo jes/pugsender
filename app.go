@@ -27,6 +27,22 @@ const (
 	ModeMDISingle
 )
 
+func (m Mode) String() string {
+	if m == ModeDisconnected {
+		return "DISCONNECTED"
+	} else if m == ModeNormal {
+		return "NOR"
+	} else if m == ModeJog {
+		return "JOG"
+	} else if m == ModeMDI {
+		return "MDI"
+	} else if m == ModeMDISingle {
+		return "MDI"
+	} else {
+		return "???"
+	}
+}
+
 type App struct {
 	g         *Grbl
 	th        *material.Theme
@@ -70,6 +86,10 @@ func (a *App) Run() {
 	go func() {
 		for {
 			<-a.g.StatusUpdate
+			if a.mode == ModeDisconnected {
+				a.mode = ModeNormal
+				a.modeStack = make([]Mode, 0)
+			}
 			w.Invalidate()
 		}
 	}()

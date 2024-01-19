@@ -126,6 +126,12 @@ func (a *App) Connect(g *Grbl) {
 }
 
 func (a *App) Layout(gtx C) D {
+
+	if a.mdi.editor.Focused() && a.mode != ModeMDI && a.mode != ModeMDISingle {
+		// TODO: should this push ModeMDISingle if mode == ModeJog?
+		a.PushMode(ModeMDI)
+	}
+
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		// label at top
 		layout.Flexed(1, func(gtx C) D {

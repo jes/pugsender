@@ -191,13 +191,8 @@ func (a *App) Layout(gtx C) D {
 	}
 
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-		// label at top
 		layout.Flexed(1, func(gtx C) D {
 			return drawDRO(a.th, gtx, a.g)
-		}),
-		// then an image
-		layout.Rigid(func(gtx C) D {
-			return drawImage(gtx, a.img)
 		}),
 		layout.Rigid(a.mdi.Layout),
 		layout.Rigid(a.LayoutStatusBar),
@@ -270,5 +265,12 @@ func (a *App) KeyPress(e key.Event) {
 			a.mdi.Defocus()
 		}
 		a.PopMode()
+	}
+}
+
+func (a *App) Label(text string) Label {
+	return Label{
+		text: text,
+		app:  a,
 	}
 }

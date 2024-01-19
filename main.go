@@ -69,7 +69,7 @@ func run(g *Grbl) {
 			layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 				// label at top
 				layout.Flexed(1, func(gtx C) D {
-					return drawLabel(th, gtx, g)
+					return drawDRO(th, gtx, g)
 				}),
 				// then an image
 				layout.Flexed(0.5, func(gtx C) D {

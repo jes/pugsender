@@ -9,7 +9,7 @@ import (
 	"gioui.org/widget/material"
 )
 
-func drawMDI(th *material.Theme, gtx layout.Context, editor *widget.Editor, g *Grbl) D {
+func drawMDI(th *material.Theme, gtx C, editor *widget.Editor, g *Grbl) D {
 	// handle MDI input
 	for _, e := range editor.Events() {
 		switch e.(type) {

@@ -8,9 +8,11 @@ import (
 
 	"gioui.org/app"
 	"gioui.org/font/gofont"
+	"gioui.org/io/key"
 	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/text"
 	"gioui.org/unit"
@@ -95,10 +97,34 @@ func (a *App) Run() {
 		case system.FrameEvent:
 			gtx := layout.NewContext(&ops, e)
 
+			// handle keypresses
+			for _, gtxEvent := range gtx.Events(0) {
+				switch gtxE := gtxEvent.(type) {
+				case key.Event:
+					if gtxE.State == key.Press {
+						a.KeyPress(gtxE)
+					}
+				}
+			}
+
 			// fill with background colour
 			paint.Fill(&ops, a.th.Palette.Bg)
 
 			a.Layout(gtx)
+
+			eventArea := clip.Rect(
+				image.Rectangle{
+					// From top left
+					Min: image.Point{0, 0},
+					// To bottom right
+					Max: image.Point{gtx.Constraints.Max.X, gtx.Constraints.Max.Y},
+				},
+			).Push(gtx.Ops)
+			key.InputOp{
+				Keys: key.Set("G|M|" + key.NameEscape),
+				Tag:  0, // Use Tag: 0 as the event routing tag, and retireve it through gtx.Events(0)
+			}.Add(gtx.Ops)
+			eventArea.Pop()
 
 			e.Frame(gtx.Ops)
 		case system.DestroyEvent:
@@ -126,10 +152,14 @@ func (a *App) Connect(g *Grbl) {
 }
 
 func (a *App) Layout(gtx C) D {
+	// TODO: make it so if we click outside the MDI then we leave MDI mode?
 
 	if a.mdi.editor.Focused() && a.mode != ModeMDI && a.mode != ModeMDISingle {
 		// TODO: should this push ModeMDISingle if mode == ModeJog?
 		a.PushMode(ModeMDI)
+	}
+	if !a.mdi.editor.Focused() && (a.mode == ModeMDI || a.mode == ModeMDISingle) {
+		a.PopMode()
 	}
 
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
@@ -163,6 +193,7 @@ func (a *App) PushMode(m Mode) {
 }
 
 func (a *App) PopMode() {
+	fmt.Printf("%#v\n", a.modeStack)
 	l := len(a.modeStack)
 	if l > 0 {
 		a.mode = a.modeStack[l-1]
@@ -170,9 +201,28 @@ func (a *App) PopMode() {
 	} else {
 		a.mode = ModeNormal
 	}
+	fmt.Println("mode = %s\n", a.mode)
+	a.w.Invalidate()
 }
 
 func (a *App) ResetMode(m Mode) {
 	a.mode = m
 	a.modeStack = []Mode{}
+}
+
+func (a *App) KeyPress(e key.Event) {
+	if a.mode == ModeNormal {
+		if e.Name == "G" || e.Name == "M" {
+			if a.mdi.editor.Text() == "" {
+				a.mdi.editor.SetText(e.Name)
+			}
+			a.mdi.editor.Focus()
+			a.mdi.editor.SetCaret(1, 1)
+			a.PushMode(ModeMDI)
+		}
+	}
+
+	if e.Name == key.NameEscape {
+		a.PopMode()
+	}
 }

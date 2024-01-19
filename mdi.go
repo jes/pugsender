@@ -1,10 +1,14 @@
 package main
 
 import (
+	"fmt"
+
 	"gioui.org/font/gofont"
+	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"gioui.org/x/eventx"
 )
 
 type MDI struct {
@@ -29,6 +33,8 @@ func (m *MDI) Layout(gtx C) D {
 		case widget.SubmitEvent:
 			m.app.MDIInput(m.editor.Text())
 			m.editor.SetText("")
+		default:
+			fmt.Printf("%#v\n", e)
 		}
 	}
 
@@ -36,7 +42,22 @@ func (m *MDI) Layout(gtx C) D {
 		return layout.UniformInset(5).Layout(gtx, func(gtx C) D {
 			ed := material.Editor(m.app.th, m.editor, "")
 			ed.Font = gofont.Collection()[6].Font
-			return ed.Layout(gtx)
+
+			// let the escape key defocus the input
+			// https://github.com/gioui/gio/pull/38
+			spy, spiedGtx := eventx.Enspy(gtx)
+			dims := ed.Layout(spiedGtx)
+			for _, group := range spy.AllEvents() {
+				for _, event := range group.Items {
+					switch e := event.(type) {
+					case key.Event:
+						if e.State == key.Press && e.Name == key.NameEscape {
+							key.FocusOp{}.Add(gtx.Ops)
+						}
+					}
+				}
+			}
+			return dims
 		})
 	})
 

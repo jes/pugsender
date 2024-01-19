@@ -1,28 +1,40 @@
 package main
 
 import (
-	"fmt"
-
 	"gioui.org/font/gofont"
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 )
 
-func drawMDI(th *material.Theme, gtx C, editor *widget.Editor, g *Grbl) D {
+type MDI struct {
+	app    *App
+	editor *widget.Editor
+}
+
+func NewMDI(app *App) *MDI {
+	return &MDI{
+		app: app,
+		editor: &widget.Editor{
+			SingleLine: true,
+			Submit:     true,
+		},
+	}
+}
+
+func (m *MDI) Layout(gtx C) D {
 	// handle MDI input
-	for _, e := range editor.Events() {
+	for _, e := range m.editor.Events() {
 		switch e.(type) {
 		case widget.SubmitEvent:
-			g.Write([]byte(editor.Text() + "\n"))
-			fmt.Printf(" > [%s]\n", editor.Text())
-			editor.SetText("")
+			m.app.MDIInput(m.editor.Text())
+			m.editor.SetText("")
 		}
 	}
 
-	return widget.Border{Width: 1, CornerRadius: 2, Color: th.Palette.ContrastFg}.Layout(gtx, func(gtx C) D {
+	return widget.Border{Width: 1, CornerRadius: 2, Color: m.app.th.Palette.ContrastFg}.Layout(gtx, func(gtx C) D {
 		return layout.UniformInset(5).Layout(gtx, func(gtx C) D {
-			ed := material.Editor(th, editor, "")
+			ed := material.Editor(m.app.th, m.editor, "")
 			ed.Font = gofont.Collection()[6].Font
 			return ed.Layout(gtx)
 		})

@@ -6,7 +6,7 @@ import (
 	"gioui.org/widget/material"
 )
 
-func drawStatusBar(th *material.Theme, gtx C, a *App) D {
-	label := material.H4(th, fmt.Sprintf("mode=%s", a.mode))
+func (a *App) LayoutStatusBar(gtx C) D {
+	label := material.H4(a.th, fmt.Sprintf("mode=%s port=%s", a.mode, a.g.PortName))
 	return label.Layout(gtx)
 }

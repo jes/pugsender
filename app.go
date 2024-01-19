@@ -44,10 +44,12 @@ func (m Mode) String() string {
 }
 
 type App struct {
-	g         *Grbl
-	th        *material.Theme
-	mode      Mode
-	modeStack []Mode
+	g           *Grbl
+	th          *material.Theme
+	w           *app.Window
+	mode        Mode
+	modeStack   []Mode
+	autoConnect bool
 
 	img image.Image
 	mdi *MDI
@@ -62,8 +64,10 @@ func NewApp() *App {
 	th.Palette.ContrastFg = color.NRGBA{R: 100, G: 255, B: 255, A: 255}
 
 	a := &App{
-		mode: ModeDisconnected,
-		th:   th,
+		g:           NewGrbl(nil, "<nil>"),
+		mode:        ModeDisconnected,
+		th:          th,
+		autoConnect: true,
 	}
 	a.mdi = NewMDI(a)
 
@@ -74,30 +78,19 @@ func NewApp() *App {
 		os.Exit(1)
 	}
 
-	return a
-}
-
-func (a *App) Run() {
-	w := app.NewWindow(
+	a.w = app.NewWindow(
 		app.Title("G-code sender"),
 		app.Size(unit.Dp(800), unit.Dp(600)),
 	)
 
-	go func() {
-		for {
-			<-a.g.StatusUpdate
-			if a.mode == ModeDisconnected {
-				a.mode = ModeNormal
-				a.modeStack = make([]Mode, 0)
-			}
-			w.Invalidate()
-		}
-	}()
+	return a
+}
 
+func (a *App) Run() {
 	var ops op.Ops
 
 	for {
-		e := w.NextEvent()
+		e := a.w.NextEvent()
 		switch e := e.(type) {
 		case system.FrameEvent:
 			gtx := layout.NewContext(&ops, e)
@@ -116,7 +109,20 @@ func (a *App) Run() {
 
 func (a *App) Connect(g *Grbl) {
 	a.g = g
-	go a.g.Monitor()
+	go func() {
+		for {
+			<-a.g.StatusUpdate
+			if a.g.Closed {
+				a.ResetMode(ModeDisconnected)
+			} else if a.mode == ModeDisconnected {
+				a.ResetMode(ModeNormal)
+			}
+			a.w.Invalidate()
+			if a.g.Closed {
+				return
+			}
+		}
+	}()
 }
 
 func (a *App) Layout(gtx C) D {
@@ -129,12 +135,8 @@ func (a *App) Layout(gtx C) D {
 		layout.Rigid(func(gtx C) D {
 			return drawImage(gtx, a.img)
 		}),
-		// then an input
 		layout.Rigid(a.mdi.Layout),
-		// status bar
-		layout.Rigid(func(gtx C) D {
-			return drawStatusBar(a.th, gtx, a)
-		}),
+		layout.Rigid(a.LayoutStatusBar),
 	)
 }
 
@@ -162,4 +164,9 @@ func (a *App) PopMode() {
 	} else {
 		a.mode = ModeNormal
 	}
+}
+
+func (a *App) ResetMode(m Mode) {
+	a.mode = m
+	a.modeStack = []Mode{}
 }

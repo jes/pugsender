@@ -11,6 +11,7 @@ import (
 
 type Grbl struct {
 	SerialPort      io.ReadWriteCloser
+	PortName        string
 	Closed          bool
 	Status          string
 	Wco             V4d
@@ -36,11 +37,16 @@ type Grbl struct {
 	UpdateTime      time.Time
 }
 
-func NewGrbl(port io.ReadWriteCloser) *Grbl {
-	return &Grbl{
+func NewGrbl(port io.ReadWriteCloser, portName string) *Grbl {
+	g := &Grbl{
 		SerialPort:   port,
+		PortName:     portName,
 		StatusUpdate: make(chan struct{}),
 	}
+	if port == nil {
+		g.Closed = true
+	}
+	return g
 }
 
 // implements io.Writer
@@ -51,10 +57,19 @@ func (g *Grbl) Write(p []byte) (n int, err error) {
 // implements io.Closer
 func (g *Grbl) Close() error {
 	g.Closed = true
-	return g.SerialPort.Close()
+	var err error
+	if g.SerialPort != nil {
+		err = g.SerialPort.Close()
+	}
+	g.StatusUpdate <- struct{}{}
+	return err
 }
 
 func (g *Grbl) Monitor() {
+	if g.SerialPort == nil {
+		g.Close()
+	}
+
 	// ask for a status update every 200ms, until Closed
 	ticker := time.NewTicker(200 * time.Millisecond)
 	go func() {
@@ -65,7 +80,9 @@ func (g *Grbl) Monitor() {
 			}
 			_, err := g.Write([]byte{'?'})
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "error asking for status update, ignoring: %v", err)
+				fmt.Fprintf(os.Stderr, "error asking for status update, closing: %v", err)
+				g.Close()
+				return
 			}
 		}
 	}()
@@ -81,7 +98,7 @@ func (g *Grbl) Monitor() {
 			g.ParseStatus(line)
 		}
 	}
-	g.Closed = true
+	g.Close()
 }
 
 // "status" should be a status report line from Grbl

@@ -26,7 +26,6 @@ const (
 	ModeNormal
 	ModeJog
 	ModeMDI
-	ModeMDISingle
 )
 
 func (m Mode) String() string {
@@ -37,8 +36,6 @@ func (m Mode) String() string {
 	} else if m == ModeJog {
 		return "JOG"
 	} else if m == ModeMDI {
-		return "MDI"
-	} else if m == ModeMDISingle {
 		return "MDI"
 	} else {
 		return "???"
@@ -121,7 +118,7 @@ func (a *App) Run() {
 				},
 			).Push(gtx.Ops)
 			key.InputOp{
-				Keys: key.Set("G|M|" + key.NameEscape),
+				Keys: key.Set("(Shift)-G|(Shift)-M|" + key.NameEscape),
 				Tag:  0, // Use Tag: 0 as the event routing tag, and retireve it through gtx.Events(0)
 			}.Add(gtx.Ops)
 			eventArea.Pop()
@@ -154,11 +151,10 @@ func (a *App) Connect(g *Grbl) {
 func (a *App) Layout(gtx C) D {
 	// TODO: make it so if we click outside the MDI then we leave MDI mode?
 
-	if a.mdi.editor.Focused() && a.mode != ModeMDI && a.mode != ModeMDISingle {
-		// TODO: should this push ModeMDISingle if mode == ModeJog?
+	if a.mdi.editor.Focused() && a.mode != ModeMDI {
 		a.PushMode(ModeMDI)
 	}
-	if !a.mdi.editor.Focused() && (a.mode == ModeMDI || a.mode == ModeMDISingle) {
+	if !a.mdi.editor.Focused() && a.mode == ModeMDI {
 		a.PopMode()
 	}
 
@@ -179,20 +175,24 @@ func (a *App) Layout(gtx C) D {
 func (a *App) MDIInput(line string) {
 	a.g.Write([]byte(line + "\n"))
 	fmt.Printf(" > [%s]\n", line)
-	if a.mode == ModeMDISingle {
+	if a.mode == ModeMDI {
+		a.mdi.Defocus()
 		a.PopMode()
 	}
 }
 
 func (a *App) PushMode(m Mode) {
+	fmt.Printf("push mode %s", m)
 	if m == a.mode {
 		return
 	}
 	a.modeStack = append(a.modeStack, a.mode)
 	a.mode = m
+	a.w.Invalidate()
 }
 
 func (a *App) PopMode() {
+	fmt.Println("pop mode")
 	l := len(a.modeStack)
 	if l > 0 {
 		a.mode = a.modeStack[l-1]
@@ -209,6 +209,7 @@ func (a *App) ResetMode(m Mode) {
 	if a.mdi.editor.Focused() {
 		a.mdi.Defocus()
 	}
+	a.w.Invalidate()
 }
 
 func (a *App) KeyPress(e key.Event) {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"image/color"
 
 	"gioui.org/font/gofont"
 	"gioui.org/io/key"
@@ -29,6 +30,7 @@ func NewMDI(app *App) *MDI {
 
 func (m *MDI) Defocus() {
 	m.wantDefocus = true
+	m.app.w.Invalidate()
 }
 
 func (m *MDI) Layout(gtx C) D {
@@ -43,7 +45,16 @@ func (m *MDI) Layout(gtx C) D {
 		}
 	}
 
-	return widget.Border{Width: 1, CornerRadius: 2, Color: m.app.th.Palette.ContrastFg}.Layout(gtx, func(gtx C) D {
+	m.editor.ReadOnly = (m.app.mode == ModeDisconnected)
+
+	borderColour := color.NRGBA{R: 0, G: 255, B: 255, A: 255}
+	if m.editor.ReadOnly {
+		borderColour = color.NRGBA{R: 100, G: 100, B: 100, A: 255}
+	} else if !m.editor.Focused() {
+		borderColour = color.NRGBA{R: 0, G: 128, B: 128, A: 255}
+	}
+
+	return widget.Border{Width: 1, CornerRadius: 2, Color: borderColour}.Layout(gtx, func(gtx C) D {
 		return layout.UniformInset(5).Layout(gtx, func(gtx C) D {
 			ed := material.Editor(m.app.th, m.editor, "")
 			ed.Font = gofont.Collection()[6].Font

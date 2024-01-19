@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -35,6 +36,8 @@ type Grbl struct {
 	Probe           bool
 	StatusUpdate    chan struct{}
 	UpdateTime      time.Time
+	ResponseQueue   []chan string
+	ResponseLock    sync.Mutex
 }
 
 func NewGrbl(port io.ReadWriteCloser, portName string) *Grbl {
@@ -49,9 +52,36 @@ func NewGrbl(port io.ReadWriteCloser, portName string) *Grbl {
 	return g
 }
 
+// add the given line to the command queue, returning a channel
+// which will receive the response if the command was added to
+// the queue, or nil if the queue is full
+//
+// only use this function for commands that expect a response
+func (g *Grbl) Command(line string) chan string {
+	// not enough space in Grbl's input buffer? reject the command
+	if g.SerialFree <= len(line)+1 {
+		return nil
+	}
+
+	responseChan := make(chan string)
+	g.ResponseLock.Lock()
+	g.ResponseQueue = append(g.ResponseQueue, responseChan)
+	g.ResponseLock.Unlock()
+
+	_, err := g.Write([]byte(line + "\n"))
+	if err != nil {
+		// error on write? close the connection and reject the command
+		g.Close()
+		return nil
+	}
+
+	return responseChan
+}
+
 // implements io.Writer
 func (g *Grbl) Write(p []byte) (n int, err error) {
 	// TODO: is there a race condition where concurrent writes can end up interleaved?
+	g.SerialFree -= len(p)
 	os.Stdout.Write(p)
 	return g.SerialPort.Write(p)
 }
@@ -98,6 +128,8 @@ func (g *Grbl) Monitor() {
 		if strings.HasPrefix(line, "<") && strings.HasSuffix(line, ">") {
 			// status update
 			g.ParseStatus(line)
+		} else if strings.HasPrefix(line, "ok") || strings.HasPrefix(line, "error") {
+			g.SendResponse(line)
 		}
 	}
 	g.Close()
@@ -179,4 +211,19 @@ func (g *Grbl) ParseStatus(status string) {
 	g.Vel = distanceMoved.Div(g.UpdateTime.Sub(prevUpdateTime).Seconds())
 
 	g.StatusUpdate <- struct{}{}
+}
+
+func (g *Grbl) SendResponse(line string) {
+	g.ResponseLock.Lock()
+	defer g.ResponseLock.Unlock()
+
+	l := len(g.ResponseQueue)
+	if l == 0 {
+		fmt.Fprintf(os.Stderr, "BUG: wanted to send a command response, but no channels are waiting; this means the sender is out of sync\n")
+		return
+	}
+
+	responseChan := g.ResponseQueue[0]
+	g.ResponseQueue = g.ResponseQueue[1:]
+	responseChan <- line
 }

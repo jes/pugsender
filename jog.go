@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -43,7 +44,7 @@ func NewJogControl(app *App) JogControl {
 		keyHeld:      make(map[string]bool),
 		FeedRate:     100,
 		Increment:    1,
-		TickerPeriod: 500 * time.Millisecond,
+		TickerPeriod: 100 * time.Millisecond,
 	}
 }
 
@@ -81,7 +82,7 @@ func (j JogControl) SingleContinuous() {
 
 	jogLine := "$J=G91"
 	anyJogs := false
-	jogDist := j.FeedRate * j.TickerPeriod.Minutes() * 100
+	jogDist := j.FeedRate * j.TickerPeriod.Minutes()
 
 	for axis, dir := range jogDir {
 		if dir != 0 {
@@ -91,9 +92,14 @@ func (j JogControl) SingleContinuous() {
 	}
 
 	if anyJogs {
-		jogLine += fmt.Sprintf("F%.3f\n", j.FeedRate)
-		if j.app.g.PlannerFree > 3 {
-			j.app.g.Write([]byte(jogLine))
+		jogLine += fmt.Sprintf("F%.3f", j.FeedRate)
+		if c := j.app.g.Command(jogLine); c != nil {
+			resp := <-c
+			if resp != "ok" {
+				fmt.Fprintf(os.Stderr, "error response to jog command [%s]: %s, ignoring\n", jogLine, resp)
+			}
+		} else {
+			fmt.Fprintf(os.Stderr, "queue full while trying to jog, ignoring\n")
 		}
 	}
 

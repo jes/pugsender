@@ -193,7 +193,6 @@ func (a *App) PushMode(m Mode) {
 }
 
 func (a *App) PopMode() {
-	fmt.Printf("%#v\n", a.modeStack)
 	l := len(a.modeStack)
 	if l > 0 {
 		a.mode = a.modeStack[l-1]
@@ -201,13 +200,15 @@ func (a *App) PopMode() {
 	} else {
 		a.mode = ModeNormal
 	}
-	fmt.Println("mode = %s\n", a.mode)
 	a.w.Invalidate()
 }
 
 func (a *App) ResetMode(m Mode) {
 	a.mode = m
 	a.modeStack = []Mode{}
+	if a.mdi.editor.Focused() {
+		a.mdi.Defocus()
+	}
 }
 
 func (a *App) KeyPress(e key.Event) {
@@ -215,9 +216,9 @@ func (a *App) KeyPress(e key.Event) {
 		if e.Name == "G" || e.Name == "M" {
 			if a.mdi.editor.Text() == "" {
 				a.mdi.editor.SetText(e.Name)
+				a.mdi.editor.SetCaret(1, 1)
 			}
 			a.mdi.editor.Focus()
-			a.mdi.editor.SetCaret(1, 1)
 			a.PushMode(ModeMDI)
 		}
 	}

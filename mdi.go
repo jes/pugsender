@@ -12,8 +12,9 @@ import (
 )
 
 type MDI struct {
-	app    *App
-	editor *widget.Editor
+	app         *App
+	editor      *widget.Editor
+	wantDefocus bool
 }
 
 func NewMDI(app *App) *MDI {
@@ -24,6 +25,10 @@ func NewMDI(app *App) *MDI {
 			Submit:     true,
 		},
 	}
+}
+
+func (m *MDI) Defocus() {
+	m.wantDefocus = true
 }
 
 func (m *MDI) Layout(gtx C) D {
@@ -52,13 +57,17 @@ func (m *MDI) Layout(gtx C) D {
 					switch e := event.(type) {
 					case key.Event:
 						if e.State == key.Press && e.Name == key.NameEscape {
-							key.FocusOp{}.Add(gtx.Ops)
+							m.wantDefocus = true
 						}
 					}
 				}
 			}
+
+			if m.wantDefocus {
+				key.FocusOp{}.Add(gtx.Ops)
+				m.wantDefocus = false
+			}
 			return dims
 		})
 	})
-
 }

@@ -9,7 +9,6 @@ import (
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	"gioui.org/x/eventx"
 )
 
 type MDI struct {
@@ -58,27 +57,11 @@ func (m *MDI) Layout(gtx C) D {
 		return layout.UniformInset(5).Layout(gtx, func(gtx C) D {
 			ed := material.Editor(m.app.th, m.editor, "")
 			ed.Font = gofont.Collection()[6].Font
-
-			// let the escape key defocus the input
-			// https://github.com/gioui/gio/pull/38
-			spy, spiedGtx := eventx.Enspy(gtx)
-			dims := ed.Layout(spiedGtx)
-			for _, group := range spy.AllEvents() {
-				for _, event := range group.Items {
-					switch e := event.(type) {
-					case key.Event:
-						if e.State == key.Press && e.Name == key.NameEscape {
-							m.wantDefocus = true
-						}
-					}
-				}
-			}
-
 			if m.wantDefocus {
 				key.FocusOp{}.Add(gtx.Ops)
 				m.wantDefocus = false
 			}
-			return dims
+			return ed.Layout(gtx)
 		})
 	})
 }

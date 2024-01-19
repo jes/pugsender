@@ -117,10 +117,7 @@ func (a *App) Run() {
 						keystate[gtxE.Name] = JogKeyRelease
 					}
 				case pointer.Event:
-					// TODO: this needs to not defocus the editor if the click was inside the editor
-					if a.mdi.editor.Focused() {
-						a.mdi.Defocus()
-					}
+					a.mdi.Defocus()
 				}
 			}
 
@@ -269,6 +266,9 @@ func (a *App) KeyPress(e key.Event) {
 	}
 
 	if e.Name == key.NameEscape {
+		if a.mode == ModeMDI {
+			a.mdi.Defocus()
+		}
 		a.PopMode()
 	}
 }

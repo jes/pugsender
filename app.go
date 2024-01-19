@@ -10,6 +10,7 @@ import (
 	"gioui.org/app"
 	"gioui.org/font/gofont"
 	"gioui.org/io/key"
+	"gioui.org/io/pointer"
 	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -115,6 +116,11 @@ func (a *App) Run() {
 					} else if gtxE.State == key.Release {
 						keystate[gtxE.Name] = JogKeyRelease
 					}
+				case pointer.Event:
+					// TODO: this needs to not defocus the editor if the click was inside the editor
+					if a.mdi.editor.Focused() {
+						a.mdi.Defocus()
+					}
 				}
 			}
 
@@ -122,21 +128,20 @@ func (a *App) Run() {
 			if a.mode == ModeJog {
 				a.jog.Update(keystate)
 			} else {
-				// TODO: some idempotent operation to cancel all jogging
+				// TODO: some idempotent operation to cancel all jogging?
 			}
 
 			// fill with background colour
 			paint.Fill(&ops, a.th.Palette.Bg)
 
-			a.Layout(gtx)
-
-			// ask for keyboard events in the whole window
+			// ask for keyboard and mouse events in the whole window
 			eventArea := clip.Rect(
 				image.Rectangle{
 					Min: image.Point{0, 0},
 					Max: image.Point{gtx.Constraints.Max.X, gtx.Constraints.Max.Y},
 				},
 			).Push(gtx.Ops)
+
 			keys := []string{
 				"(Shift)-G", "(Shift)-M", "(Shift)-J", key.NameEscape, key.NameLeftArrow, key.NameRightArrow, key.NameUpArrow, key.NameDownArrow, key.NamePageUp, key.NamePageDown,
 			}
@@ -144,6 +149,15 @@ func (a *App) Run() {
 				Keys: key.Set(strings.Join(keys, "|")),
 				Tag:  a,
 			}.Add(gtx.Ops)
+
+			pointer.InputOp{
+				Kinds: pointer.Press,
+				Tag:   a,
+			}.Add(gtx.Ops)
+
+			// draw the application
+			a.Layout(gtx)
+
 			eventArea.Pop()
 
 			e.Frame(gtx.Ops)
@@ -172,8 +186,6 @@ func (a *App) Connect(g *Grbl) {
 }
 
 func (a *App) Layout(gtx C) D {
-	// TODO: make it so if we click outside the MDI then we leave MDI mode?
-
 	if a.mdi.editor.Focused() && a.mode != ModeMDI {
 		a.PushMode(ModeMDI)
 	}

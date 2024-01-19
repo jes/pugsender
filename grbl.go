@@ -56,7 +56,11 @@ func NewGrbl(port io.ReadWriteCloser, portName string) *Grbl {
 // which will receive the response if the command was added to
 // the queue, or nil if the queue is full
 //
-// only use this function for commands that expect a response
+// only use this function for commands that expect a response,
+// and don't use Write() to send any commands that will give
+// a response if you intend to use Command() again before the
+// Write() response is received, else the Write() response will
+// go to the Command() caller, and everything will be out of sync
 func (g *Grbl) Command(line string) chan string {
 	// not enough space in Grbl's input buffer? reject the command
 	if g.SerialFree <= len(line)+1 {
@@ -88,18 +92,22 @@ func (g *Grbl) Write(p []byte) (n int, err error) {
 
 // implements io.Closer
 func (g *Grbl) Close() error {
+	if g.Closed {
+		return nil
+	}
 	g.Closed = true
 	var err error
 	if g.SerialPort != nil {
 		err = g.SerialPort.Close()
 	}
-	g.StatusUpdate <- struct{}{}
+	close(g.StatusUpdate)
 	return err
 }
 
 func (g *Grbl) Monitor() {
 	if g.SerialPort == nil {
 		g.Close()
+		return
 	}
 
 	// ask for a status update every 200ms, until Closed
@@ -120,7 +128,6 @@ func (g *Grbl) Monitor() {
 	}()
 
 	// read from the serial port
-	// send a struct{} to the StatusUpdate channel whenever there isa new status report
 	scanner := bufio.NewScanner(g.SerialPort)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -136,6 +143,7 @@ func (g *Grbl) Monitor() {
 }
 
 // "status" should be a status report line from Grbl
+// send a struct{} to the StatusUpdate channel whenever there isa new status report
 func (g *Grbl) ParseStatus(status string) {
 	prevWpos := g.Wpos
 	prevUpdateTime := g.UpdateTime

@@ -96,7 +96,7 @@ func (a *App) Run() {
 			gtx := layout.NewContext(&ops, e)
 
 			// handle keypresses
-			for _, gtxEvent := range gtx.Events(0) {
+			for _, gtxEvent := range gtx.Events(a) {
 				switch gtxE := gtxEvent.(type) {
 				case key.Event:
 					if gtxE.State == key.Press {
@@ -112,11 +112,10 @@ func (a *App) Run() {
 
 			a.Layout(gtx)
 
+			// ask for keyboard events in the whole window
 			eventArea := clip.Rect(
 				image.Rectangle{
-					// From top left
 					Min: image.Point{0, 0},
-					// To bottom right
 					Max: image.Point{gtx.Constraints.Max.X, gtx.Constraints.Max.Y},
 				},
 			).Push(gtx.Ops)
@@ -125,7 +124,7 @@ func (a *App) Run() {
 			}
 			key.InputOp{
 				Keys: key.Set(strings.Join(keys, "|")),
-				Tag:  0, // Use Tag: 0 as the event routing tag, and retireve it through gtx.Events(0)
+				Tag:  a,
 			}.Add(gtx.Ops)
 			eventArea.Pop()
 

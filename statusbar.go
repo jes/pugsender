@@ -7,6 +7,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"gioui.org/widget/material"
 )
 
 func (a *App) LayoutStatusBar(gtx C) D {
@@ -34,18 +35,18 @@ func (a *App) LayoutBufferState(gtx C) D {
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx C) D {
 			// planner buffer
-			return LayoutProgressBar(gtx, utilisation(float64(a.g.PlannerSize), float64(a.g.PlannerFree)))
+			return LayoutProgressBar(gtx, utilisation(float64(a.g.PlannerSize), float64(a.g.PlannerFree)), a.th, "PLAN")
 		}),
-		layout.Rigid(layout.Spacer{Height: 4}.Layout),
+		layout.Rigid(layout.Spacer{Height: 2}.Layout),
 		layout.Rigid(func(gtx C) D {
 			// serial buffer
-			return LayoutProgressBar(gtx, utilisation(float64(a.g.SerialSize), float64(a.g.SerialFree)))
+			return LayoutProgressBar(gtx, utilisation(float64(a.g.SerialSize), float64(a.g.SerialFree)), a.th, "SER")
 		}),
 	)
 }
 
 // based on material.ProgressBar
-func LayoutProgressBar(gtx C, progress float64) D {
+func LayoutProgressBar(gtx C, progress float64, th *material.Theme, text string) D {
 	shader := func(width int, color color.NRGBA) layout.Dimensions {
 		d := image.Point{X: width, Y: gtx.Dp(18)}
 
@@ -60,15 +61,20 @@ func LayoutProgressBar(gtx C, progress float64) D {
 	colour2 := color.NRGBA{R: 64, G: 255, B: 64, A: 255}
 
 	progressBarWidth := 100
-	return layout.Stack{Alignment: layout.W}.Layout(gtx,
-		layout.Stacked(func(gtx layout.Context) layout.Dimensions {
-			return shader(progressBarWidth, colour1)
+	return layout.Stack{Alignment: layout.Center}.Layout(gtx,
+		layout.Stacked(func(gtx C) D {
+			return layout.Stack{Alignment: layout.W}.Layout(gtx,
+				layout.Stacked(func(gtx C) D {
+					return shader(progressBarWidth, colour1)
+				}),
+				layout.Stacked(func(gtx C) D {
+					fillWidth := int(float64(progressBarWidth) * clamp1(progress))
+					fillColor := colour2
+					return shader(fillWidth, fillColor)
+				}),
+			)
 		}),
-		layout.Stacked(func(gtx layout.Context) layout.Dimensions {
-			fillWidth := int(float64(progressBarWidth) * clamp1(progress))
-			fillColor := colour2
-			return shader(fillWidth, fillColor)
-		}),
+		layout.Expanded(material.H6(th, text).Layout),
 	)
 }
 

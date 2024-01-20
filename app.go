@@ -25,15 +25,18 @@ type Mode int
 
 const (
 	ModeDisconnected Mode = iota
-	ModeNormal
+	ModeJog
+	ModeRun
 	ModeMDI
 )
 
 func (m Mode) String() string {
 	if m == ModeDisconnected {
 		return "DISCONNECTED"
-	} else if m == ModeNormal {
-		return "NOR"
+	} else if m == ModeJog {
+		return "JOG"
+	} else if m == ModeRun {
+		return "RUN"
 	} else if m == ModeMDI {
 		return "MDI"
 	} else {
@@ -119,7 +122,7 @@ func (a *App) Run() {
 			}
 
 			// update jog control
-			if a.mode == ModeNormal {
+			if a.mode == ModeJog {
 				a.jog.Update(keystate)
 			} else {
 				a.jog.Cancel()
@@ -169,7 +172,7 @@ func (a *App) Connect(g *Grbl) {
 			if a.g.Closed {
 				a.ResetMode(ModeDisconnected)
 			} else if a.mode == ModeDisconnected {
-				a.ResetMode(ModeNormal)
+				a.ResetMode(ModeJog)
 			}
 			a.w.Invalidate()
 			if a.g.Closed {
@@ -218,7 +221,7 @@ func (a *App) PopMode() {
 		a.mode = a.modeStack[l-1]
 		a.modeStack = a.modeStack[:l-1]
 	} else {
-		a.mode = ModeNormal
+		a.mode = ModeJog
 	}
 	a.w.Invalidate()
 }
@@ -233,8 +236,8 @@ func (a *App) ResetMode(m Mode) {
 }
 
 func (a *App) KeyPress(e key.Event) {
-	if a.mode == ModeNormal {
-		// NORMAL MODE
+	if a.mode == ModeJog {
+		// JOG MODE
 		if e.Name == "G" || e.Name == "M" {
 			// enter MDI
 			if a.mdi.editor.Text() == "" {

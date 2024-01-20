@@ -116,8 +116,11 @@ func (j *JogControl) Incremental(axis string, dir int) {
 	// g.Command() means the responses to the continuous jog
 	// commands will be out of sync with the commands, but it
 	// seems to work anyway
-	j.app.g.Write([]byte(fmt.Sprintf("$J=G91%s%.3fF%.3f\n", axis, float64(dir)*j.Increment, j.FeedRate)))
-	j.HaveJogged = true
+	c := j.app.g.Command(fmt.Sprintf("$J=G91%s%.3fF%.3f", axis, float64(dir)*j.Increment, j.FeedRate))
+	if c != nil {
+		j.HaveJogged = true
+		go func() { <-c }() // XXX: ignore response
+	}
 }
 
 func (j *JogControl) StartContinuous(axis string, dir int) {

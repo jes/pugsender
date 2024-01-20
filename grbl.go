@@ -38,6 +38,7 @@ type Grbl struct {
 	UpdateTime      time.Time
 	ResponseQueue   []chan string
 	ResponseLock    sync.Mutex
+	GCodes          string
 }
 
 func NewGrbl(port io.ReadWriteCloser, portName string) *Grbl {
@@ -116,25 +117,51 @@ func (g *Grbl) Monitor() {
 		for {
 			<-ticker.C
 			if g.Closed {
-				return
+				break
 			}
 			_, err := g.Write([]byte{'?'})
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "error asking for status update, closing: %v", err)
 				g.Close()
-				return
+				break
 			}
 		}
+		ticker.Stop()
+	}()
+
+	// ask for active g-codes every second, until closed
+	ticker2 := time.NewTicker(time.Second)
+	go func() {
+		for {
+			<-ticker2.C
+			if g.Closed {
+				break
+			}
+			// TODO: also request gcodes whenever we think they might have changed?
+			c := g.Command("$G\n")
+			if c == nil {
+				if g.Closed {
+					break
+				} else {
+					continue
+				}
+			}
+			go func() { <-c }() // XXX: ignore response
+		}
+		ticker2.Stop()
 	}()
 
 	// read from the serial port
 	scanner := bufio.NewScanner(g.SerialPort)
 	for scanner.Scan() {
 		line := scanner.Text()
-		//fmt.Println(scanner.Text())
+		fmt.Println(scanner.Text())
 		if strings.HasPrefix(line, "<") && strings.HasSuffix(line, ">") {
 			// status update
 			g.ParseStatus(line)
+		} else if strings.HasPrefix(line, "[GC:") {
+			// g-codes update
+			g.ParseGCodes(line)
 		} else if strings.HasPrefix(line, "ok") || strings.HasPrefix(line, "error") {
 			g.SendResponse(line)
 		}
@@ -221,6 +248,10 @@ func (g *Grbl) ParseStatus(status string) {
 	g.StatusUpdate <- struct{}{}
 }
 
+func (g *Grbl) ParseGCodes(line string) {
+	g.GCodes = strings.TrimRight(strings.TrimPrefix(line, "[GC:"), "]")
+}
+
 func (g *Grbl) SendResponse(line string) {
 	g.ResponseLock.Lock()
 	defer g.ResponseLock.Unlock()
@@ -234,4 +265,5 @@ func (g *Grbl) SendResponse(line string) {
 	responseChan := g.ResponseQueue[0]
 	g.ResponseQueue = g.ResponseQueue[1:]
 	responseChan <- line
+	close(responseChan)
 }

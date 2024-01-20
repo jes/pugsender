@@ -65,7 +65,7 @@ func (a *App) LayoutFeedSpeed(gtx C) D {
 }
 
 func drawGCodes(th *material.Theme, gtx C, g *Grbl) D {
-	label := material.H4(th, fmt.Sprintf("G0 G0 G0 G0"))
+	label := material.H4(th, fmt.Sprintf(g.GCodes))
 	return label.Layout(gtx)
 }
 

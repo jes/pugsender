@@ -106,14 +106,15 @@ func (j JogControl) SingleContinuous() {
 }
 
 func (j JogControl) Incremental(axis string, dir int) {
-	fmt.Printf("incremental %s %d\n", axis, dir)
+	// TODO: sending incremental jogs with g.Write() instead of
+	// g.Command() means the responses to the continuous jog
+	// commands will be out of sync with the commands, but it
+	// seems to work anyway
 	j.app.g.Write([]byte(fmt.Sprintf("$J=G91%s%.3fF%.3f\n", axis, float64(dir)*j.Increment, j.FeedRate)))
 	// TODO: cancel any pending continuous jog? otherwise our incremental jog won't happen until after its finished?
 }
 
 func (j JogControl) StartContinuous(axis string, dir int) {
-	// TODO: actually start continuous jogging
-	fmt.Printf("StartContinuous: %s %d\n", axis, dir)
 	j.Cancel()
 	j.SingleContinuous()
 }

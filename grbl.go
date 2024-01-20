@@ -131,7 +131,7 @@ func (g *Grbl) Monitor() {
 	scanner := bufio.NewScanner(g.SerialPort)
 	for scanner.Scan() {
 		line := scanner.Text()
-		fmt.Println(scanner.Text())
+		//fmt.Println(scanner.Text())
 		if strings.HasPrefix(line, "<") && strings.HasSuffix(line, ">") {
 			// status update
 			g.ParseStatus(line)

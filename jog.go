@@ -36,6 +36,7 @@ type JogControl struct {
 	FeedRate     float64
 	Increment    float64
 	TickerPeriod time.Duration
+	HaveJogged   bool
 }
 
 func NewJogControl(app *App) JogControl {
@@ -48,12 +49,16 @@ func NewJogControl(app *App) JogControl {
 	}
 }
 
-func (j JogControl) Cancel() {
+func (j *JogControl) Cancel() {
+	if !j.HaveJogged {
+		return
+	}
 	// 0x85 = Jog Cancel
 	j.app.g.Write([]byte{0x85})
+	j.HaveJogged = false
 }
 
-func (j JogControl) Run() {
+func (j *JogControl) Run() {
 	ticker := time.NewTicker(j.TickerPeriod)
 	for {
 		<-ticker.C
@@ -63,7 +68,7 @@ func (j JogControl) Run() {
 	}
 }
 
-func (j JogControl) SingleContinuous() {
+func (j *JogControl) SingleContinuous() {
 	jogDir := make(map[string]int)
 	jogDir["X"] = 0
 	jogDir["Y"] = 0
@@ -94,6 +99,7 @@ func (j JogControl) SingleContinuous() {
 	if anyJogs {
 		jogLine += fmt.Sprintf("F%.3f", j.FeedRate)
 		if c := j.app.g.Command(jogLine); c != nil {
+			j.HaveJogged = true
 			resp := <-c
 			if resp != "ok" {
 				fmt.Fprintf(os.Stderr, "error response to jog command [%s]: %s, ignoring\n", jogLine, resp)
@@ -105,21 +111,21 @@ func (j JogControl) SingleContinuous() {
 
 }
 
-func (j JogControl) Incremental(axis string, dir int) {
+func (j *JogControl) Incremental(axis string, dir int) {
 	// TODO: sending incremental jogs with g.Write() instead of
 	// g.Command() means the responses to the continuous jog
 	// commands will be out of sync with the commands, but it
 	// seems to work anyway
 	j.app.g.Write([]byte(fmt.Sprintf("$J=G91%s%.3fF%.3f\n", axis, float64(dir)*j.Increment, j.FeedRate)))
-	// TODO: cancel any pending continuous jog? otherwise our incremental jog won't happen until after its finished?
+	j.HaveJogged = true
 }
 
-func (j JogControl) StartContinuous(axis string, dir int) {
+func (j *JogControl) StartContinuous(axis string, dir int) {
 	j.Cancel()
 	j.SingleContinuous()
 }
 
-func (j JogControl) Update(newKeyState map[string]JogKeyState) {
+func (j *JogControl) Update(newKeyState map[string]JogKeyState) {
 	j.keyHeldLock.Lock()
 	defer j.keyHeldLock.Unlock()
 
@@ -148,7 +154,7 @@ func (j JogControl) Update(newKeyState map[string]JogKeyState) {
 	}
 }
 
-func (j JogControl) KeyHeld(k string) bool {
+func (j *JogControl) KeyHeld(k string) bool {
 	if v, ok := j.keyHeld[k]; ok {
 		return v
 	} else {

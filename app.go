@@ -26,7 +26,6 @@ type Mode int
 const (
 	ModeDisconnected Mode = iota
 	ModeNormal
-	ModeJog
 	ModeMDI
 )
 
@@ -35,8 +34,6 @@ func (m Mode) String() string {
 		return "DISCONNECTED"
 	} else if m == ModeNormal {
 		return "NOR"
-	} else if m == ModeJog {
-		return "JOG"
 	} else if m == ModeMDI {
 		return "MDI"
 	} else {
@@ -122,10 +119,10 @@ func (a *App) Run() {
 			}
 
 			// update jog control
-			if a.mode == ModeJog {
+			if a.mode == ModeNormal {
 				a.jog.Update(keystate)
 			} else {
-				// TODO: some idempotent operation to cancel all jogging?
+				a.jog.Cancel()
 			}
 
 			// fill with background colour
@@ -207,7 +204,6 @@ func (a *App) MDIInput(line string) {
 }
 
 func (a *App) PushMode(m Mode) {
-	fmt.Printf("push mode %s", m)
 	if m == a.mode {
 		return
 	}
@@ -217,7 +213,6 @@ func (a *App) PushMode(m Mode) {
 }
 
 func (a *App) PopMode() {
-	fmt.Println("pop mode")
 	l := len(a.modeStack)
 	if l > 0 {
 		a.mode = a.modeStack[l-1]
@@ -238,7 +233,8 @@ func (a *App) ResetMode(m Mode) {
 }
 
 func (a *App) KeyPress(e key.Event) {
-	if a.mode == ModeNormal || a.mode == ModeJog {
+	if a.mode == ModeNormal {
+		// NORMAL MODE
 		if e.Name == "G" || e.Name == "M" {
 			// enter MDI
 			if a.mdi.editor.Text() == "" {
@@ -247,14 +243,6 @@ func (a *App) KeyPress(e key.Event) {
 			}
 			a.mdi.editor.Focus()
 			a.PushMode(ModeMDI)
-		}
-	}
-
-	if a.mode == ModeNormal {
-		// NORMAL MODE
-		if e.Name == "J" {
-			// enter jog mode
-			a.PushMode(ModeJog)
 		}
 	}
 

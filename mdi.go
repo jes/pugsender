@@ -46,11 +46,11 @@ func (m *MDI) Layout(gtx C) D {
 
 	m.editor.ReadOnly = (m.app.mode == ModeDisconnected)
 
-	borderColour := color.NRGBA{R: 0, G: 255, B: 255, A: 255}
+	borderColour := color.NRGBA{R: 255, G: 255, B: 255, A: 255}
 	if m.editor.ReadOnly {
 		borderColour = color.NRGBA{R: 100, G: 100, B: 100, A: 255}
 	} else if !m.editor.Focused() {
-		borderColour = color.NRGBA{R: 0, G: 128, B: 128, A: 255}
+		borderColour = color.NRGBA{R: 128, G: 128, B: 128, A: 255}
 	}
 
 	return widget.Border{Width: 1, CornerRadius: 2, Color: borderColour}.Layout(gtx, func(gtx C) D {

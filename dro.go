@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"gioui.org/layout"
@@ -46,7 +47,7 @@ func (a *App) LayoutDROCoords(gtx C) D {
 func (a *App) LayoutDROCoord(gtx C, name string, value float64, vel float64, lastUpdate time.Time) D {
 	dt := time.Now().Sub(lastUpdate)
 	value = value + vel*dt.Minutes()
-	if vel > 0.001 {
+	if math.Abs(vel) > 0.001 {
 		a.w.Invalidate()
 	}
 	label := material.H4(a.th, fmt.Sprintf("%s: %.03f", name, value))
@@ -56,10 +57,12 @@ func (a *App) LayoutDROCoord(gtx C, name string, value float64, vel float64, las
 func (a *App) LayoutFeedSpeed(gtx C) D {
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx C) D {
-			return a.LayoutDROCoord(gtx, "Feed", a.g.FeedRate, 0, time.Now())
+			label := material.H4(a.th, fmt.Sprintf("Feed: %.0f", a.g.FeedRate))
+			return label.Layout(gtx)
 		}),
 		layout.Rigid(func(gtx C) D {
-			return a.LayoutDROCoord(gtx, "Speed", a.g.SpindleSpeed, 0, time.Now())
+			label := material.H4(a.th, fmt.Sprintf("Speed: %.0f", a.g.SpindleSpeed))
+			return label.Layout(gtx)
 		}),
 	)
 }

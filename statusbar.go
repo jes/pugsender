@@ -32,15 +32,16 @@ func (a *App) LayoutStatusBar(gtx C) D {
 }
 
 func (a *App) LayoutBufferState(gtx C) D {
+	th := material.NewTheme()
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx C) D {
 			// planner buffer
-			return LayoutProgressBar(gtx, utilisation(float64(a.g.PlannerSize), float64(a.g.PlannerFree)), a.th, "PLAN")
+			return LayoutProgressBar(gtx, utilisation(float64(a.g.PlannerSize), float64(a.g.PlannerFree)), th, "PLAN")
 		}),
 		layout.Rigid(layout.Spacer{Height: 2}.Layout),
 		layout.Rigid(func(gtx C) D {
 			// serial buffer
-			return LayoutProgressBar(gtx, utilisation(float64(a.g.SerialSize), float64(a.g.SerialFree)), a.th, "SER")
+			return LayoutProgressBar(gtx, utilisation(float64(a.g.SerialSize), float64(a.g.SerialFree)), th, "SER")
 		}),
 	)
 }
@@ -57,8 +58,8 @@ func LayoutProgressBar(gtx C, progress float64, th *material.Theme, text string)
 		return layout.Dimensions{Size: d}
 	}
 
-	colour1 := color.NRGBA{R: 64, G: 128, B: 64, A: 255}
-	colour2 := color.NRGBA{R: 64, G: 255, B: 64, A: 255}
+	colour1 := color.NRGBA{R: 128, G: 128, B: 128, A: 255}
+	colour2 := color.NRGBA{R: 255, G: 255, B: 255, A: 255}
 
 	progressBarWidth := 100
 	return layout.Stack{Alignment: layout.Center}.Layout(gtx,

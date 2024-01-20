@@ -191,9 +191,7 @@ func (a *App) Layout(gtx C) D {
 	}
 
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-		layout.Flexed(1, func(gtx C) D {
-			return drawDRO(a.th, gtx, a.g)
-		}),
+		layout.Flexed(1, a.LayoutDRO),
 		layout.Rigid(a.mdi.Layout),
 		layout.Rigid(a.LayoutStatusBar),
 	)

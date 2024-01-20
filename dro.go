@@ -2,30 +2,24 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"gioui.org/layout"
 	"gioui.org/widget/material"
 )
 
-func drawDRO(th *material.Theme, gtx C, g *Grbl) D {
+func (a *App) LayoutDRO(gtx C) D {
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx C) D {
-			return drawGrblStatus(th, gtx, g)
+			return drawGrblStatus(a.th, gtx, a.g)
+		}),
+		layout.Rigid(a.LayoutDROCoords),
+		layout.Rigid(a.LayoutFeedSpeed),
+		layout.Rigid(func(gtx C) D {
+			return drawGCodes(a.th, gtx, a.g)
 		}),
 		layout.Rigid(func(gtx C) D {
-			return drawCoords(th, gtx, g)
-		}),
-		layout.Rigid(func(gtx C) D {
-			return drawFeedSpeed(th, gtx, g)
-		}),
-		layout.Rigid(func(gtx C) D {
-			return drawGCodes(th, gtx, g)
-		}),
-		layout.Rigid(func(gtx C) D {
-			return drawBufferState(th, gtx, g)
-		}),
-		layout.Rigid(func(gtx C) D {
-			return drawGrblModes(th, gtx, g)
+			return drawGrblModes(a.th, gtx, a.g)
 		}),
 	)
 }
@@ -35,43 +29,43 @@ func drawGrblStatus(th *material.Theme, gtx C, g *Grbl) D {
 	return label.Layout(gtx)
 }
 
-func drawCoords(th *material.Theme, gtx C, g *Grbl) D {
+func (a *App) LayoutDROCoords(gtx C) D {
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx C) D {
-			return drawCoord(th, gtx, "X", g.Wpos.X)
+			return a.LayoutDROCoord(gtx, "X", a.g.Wpos.X, a.g.Vel.X, a.g.UpdateTime)
 		}),
 		layout.Rigid(func(gtx C) D {
-			return drawCoord(th, gtx, "Y", g.Wpos.Y)
+			return a.LayoutDROCoord(gtx, "Y", a.g.Wpos.Y, a.g.Vel.Y, a.g.UpdateTime)
 		}),
 		layout.Rigid(func(gtx C) D {
-			return drawCoord(th, gtx, "Z", g.Wpos.Z)
+			return a.LayoutDROCoord(gtx, "Z", a.g.Wpos.Z, a.g.Vel.Z, a.g.UpdateTime)
 		}),
 	)
 }
 
-func drawCoord(th *material.Theme, gtx C, name string, value float64) D {
-	label := material.H4(th, fmt.Sprintf("%s: %.03f", name, value))
+func (a *App) LayoutDROCoord(gtx C, name string, value float64, vel float64, lastUpdate time.Time) D {
+	dt := time.Now().Sub(lastUpdate)
+	value = value + vel*dt.Minutes()
+	if vel > 0.001 {
+		a.w.Invalidate()
+	}
+	label := material.H4(a.th, fmt.Sprintf("%s: %.03f", name, value))
 	return label.Layout(gtx)
 }
 
-func drawFeedSpeed(th *material.Theme, gtx C, g *Grbl) D {
+func (a *App) LayoutFeedSpeed(gtx C) D {
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx C) D {
-			return drawCoord(th, gtx, "Feed", g.FeedRate)
+			return a.LayoutDROCoord(gtx, "Feed", a.g.FeedRate, 0, time.Now())
 		}),
 		layout.Rigid(func(gtx C) D {
-			return drawCoord(th, gtx, "Speed", g.SpindleSpeed)
+			return a.LayoutDROCoord(gtx, "Speed", a.g.SpindleSpeed, 0, time.Now())
 		}),
 	)
 }
 
 func drawGCodes(th *material.Theme, gtx C, g *Grbl) D {
 	label := material.H4(th, fmt.Sprintf("G0 G0 G0 G0"))
-	return label.Layout(gtx)
-}
-
-func drawBufferState(th *material.Theme, gtx C, g *Grbl) D {
-	label := material.H4(th, fmt.Sprintf("Bf: %d/%d %d/%d", (g.PlannerSize-g.PlannerFree), g.PlannerSize, (g.SerialSize-g.SerialFree), g.SerialSize))
 	return label.Layout(gtx)
 }
 

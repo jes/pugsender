@@ -140,7 +140,7 @@ func (a *App) Run() {
 			).Push(gtx.Ops)
 
 			keys := []string{
-				"(Shift)-G", "(Shift)-M", "(Shift)-J", key.NameEscape, key.NameLeftArrow, key.NameRightArrow, key.NameUpArrow, key.NameDownArrow, key.NamePageUp, key.NamePageDown,
+				"(Shift)-S", "(Shift)-R", "(Shift)-H", "(Shift)-G", "(Shift)-M", "(Shift)-J", key.NameEscape, key.NameLeftArrow, key.NameRightArrow, key.NameUpArrow, key.NameDownArrow, key.NamePageUp, key.NamePageDown,
 			}
 			key.InputOp{
 				Keys: key.Set(strings.Join(keys, "|")),
@@ -246,6 +246,15 @@ func (a *App) KeyPress(e key.Event) {
 			}
 			a.mdi.editor.Focus()
 			a.PushMode(ModeMDI)
+		} else if e.Name == "H" {
+			// feed hold
+			a.g.Write([]byte{'!'})
+		} else if e.Name == "R" {
+			// soft-reset
+			a.g.Write([]byte{0x18})
+		} else if e.Name == "S" {
+			// cycle-start
+			a.g.Write([]byte{'~'})
 		}
 	}
 

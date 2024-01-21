@@ -313,3 +313,7 @@ func (g *Grbl) MposExt() V4d {
 	dt := time.Now().Sub(g.UpdateTime)
 	return g.Mpos.Add(g.Vel.Mul(dt.Minutes()))
 }
+
+func (g *Grbl) SetWpos(v V4d) bool {
+	return g.CommandIgnore(fmt.Sprintf("G10L20P1X%.03fY%.03f", v.X, v.Y))
+}

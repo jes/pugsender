@@ -17,6 +17,7 @@ type Path struct {
 	centre        V4d // what coordinate is in the centre?
 	widthPx       int
 	heightPx      int
+	axes          V4d
 }
 
 func NewPath() *Path {
@@ -38,7 +39,7 @@ func (p *Path) Render() image.Image {
 	gc := draw2dimg.NewGraphicContext(img)
 
 	if p.showAxes {
-		centrex, centrey := p.MmToPx(0, 0)
+		centrex, centrey := p.MmToPx(p.axes.X, p.axes.Y)
 
 		gc.SetStrokeColor(rgb(64, 0, 0))
 		gc.MoveTo(centrex, 0)

@@ -233,12 +233,19 @@ func (a *App) LayoutMDI(gtx C) D {
 }
 
 func (a *App) LayoutToolpath(gtx C) D {
-	a.path.Update(a.g.Wpos)
-	a.path.crossHair = a.g.WposExt()
+	a.path.Update(a.g.Mpos)
+	a.path.crossHair = a.g.MposExt()
+	a.path.axes.X = -a.g.Wco.X
+	a.path.axes.Y = -a.g.Wco.Y
 
 	for _, gtxEvent := range gtx.Events(a.path) {
 		switch gtxE := gtxEvent.(type) {
 		case pointer.Event:
+			// get click point in work coordinates
+			xMm, yMm := a.path.PxToMm(float64(gtxE.Position.X), float64(gtxE.Position.Y))
+			xMm += a.g.Wco.X
+			yMm += a.g.Wco.Y
+
 			if gtxE.Kind == pointer.Scroll {
 				a.path.pxPerMm *= 1.0 - float64(gtxE.Scroll.Y)/100.0
 			} else if gtxE.Kind == pointer.Drag {
@@ -251,17 +258,26 @@ func (a *App) LayoutToolpath(gtx C) D {
 				newCentre := origCentre.Add((a.dragStart.Sub(gtxE.Position)).Div(float32(a.path.pxPerMm)))
 				a.path.centre = V4d{X: float64(newCentre.X), Y: float64(newCentre.Y)}
 			} else if gtxE.Kind == pointer.Release {
-				if !a.dragging && gtxE.Modifiers.Contain(key.ModCtrl) {
-					a.jog.JogTo(a.path.PxToMm(float64(gtxE.Position.X), float64(gtxE.Position.Y)))
+				if !a.dragging {
+					if gtxE.Modifiers.Contain(key.ModCtrl) {
+						// ctrl-click = jog
+						a.jog.JogTo(xMm, yMm)
+					} else if gtxE.Modifiers.Contain(key.ModShift) {
+						// shift-click = set work offset
+						pos := a.g.Wpos
+						pos.X = xMm
+						pos.Y = yMm
+						a.g.SetWpos(pos)
+					}
 				}
+				// TODO: right-click for context menu?
 				a.dragging = false
 			} else if gtxE.Kind == pointer.Move {
 				a.hovering = true
 			} else if gtxE.Kind == pointer.Leave {
 				a.hovering = false
 			}
-			x, y := a.path.PxToMm(float64(gtxE.Position.X), float64(gtxE.Position.Y))
-			a.hoverPoint = V4d{X: x, Y: y}
+			a.hoverPoint = V4d{X: xMm, Y: yMm}
 		}
 	}
 

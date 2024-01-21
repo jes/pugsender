@@ -141,7 +141,7 @@ func (g *Grbl) Monitor() {
 				break
 			}
 			// TODO: also request gcodes whenever we think they might have changed?
-			c := g.Command("$G\n")
+			c := g.Command("$G")
 			if c == nil {
 				if g.Closed {
 					break

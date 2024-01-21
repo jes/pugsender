@@ -2,30 +2,45 @@ package main
 
 import (
 	"fmt"
+	"image/color"
 	"math"
 	"time"
 
 	"gioui.org/layout"
+	"gioui.org/widget"
 	"gioui.org/widget/material"
 )
 
 func (a *App) LayoutDRO(gtx C) D {
-	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-		layout.Rigid(a.LayoutGrblStatus),
-		layout.Rigid(a.LayoutDROCoords),
-		layout.Rigid(a.LayoutFeedSpeed),
-		layout.Rigid(func(gtx C) D {
-			return drawGCodes(a.th, gtx, a.g)
-		}),
-		layout.Rigid(func(gtx C) D {
-			return drawGrblModes(a.th, gtx, a.g)
-		}),
-	)
+	return layout.UniformInset(5).Layout(gtx, func(gtx C) D {
+		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+			layout.Rigid(a.LayoutGrblStatus),
+			layout.Rigid(a.LayoutDROCoords),
+			layout.Rigid(a.LayoutFeedSpeed),
+			layout.Rigid(func(gtx C) D {
+				return drawGCodes(a.th, gtx, a.g)
+			}),
+			layout.Rigid(func(gtx C) D {
+				return drawGrblModes(a.th, gtx, a.g)
+			}),
+		)
+	})
 }
 
 func (a *App) LayoutGrblStatus(gtx C) D {
 	label := material.H4(a.th, a.g.Status)
-	return label.Layout(gtx)
+	borderColour := color.NRGBA{R: 128, G: 128, B: 128, A: 255}
+	return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+		layout.Rigid(func(gtx C) D {
+			return widget.Border{Width: 1, CornerRadius: 2, Color: borderColour}.Layout(gtx, func(gtx C) D {
+				return LayoutColour(gtx, color.NRGBA{R: 32, G: 32, B: 32, A: 255}, func(gtx C) D {
+					return layout.UniformInset(5).Layout(gtx, func(gtx C) D {
+						return label.Layout(gtx)
+					})
+				})
+			})
+		}),
+	)
 }
 
 func (a *App) LayoutDROCoords(gtx C) D {

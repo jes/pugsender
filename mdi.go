@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"image/color"
 
-	"gioui.org/font/gofont"
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
@@ -44,7 +43,7 @@ func (m *MDI) Layout(gtx C) D {
 		}
 	}
 
-	m.editor.ReadOnly = (m.app.mode == ModeDisconnected)
+	m.editor.ReadOnly = (m.app.mode == ModeConnect)
 
 	borderColour := color.NRGBA{R: 255, G: 255, B: 255, A: 255}
 	if m.editor.ReadOnly {
@@ -56,7 +55,6 @@ func (m *MDI) Layout(gtx C) D {
 	return widget.Border{Width: 1, CornerRadius: 2, Color: borderColour}.Layout(gtx, func(gtx C) D {
 		return layout.UniformInset(5).Layout(gtx, func(gtx C) D {
 			ed := material.Editor(m.app.th, m.editor, "")
-			ed.Font = gofont.Collection()[6].Font
 			if m.wantDefocus {
 				key.FocusOp{}.Add(gtx.Ops)
 				m.wantDefocus = false

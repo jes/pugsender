@@ -11,9 +11,7 @@ import (
 
 func (a *App) LayoutDRO(gtx C) D {
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-		layout.Rigid(func(gtx C) D {
-			return drawGrblStatus(a.th, gtx, a.g)
-		}),
+		layout.Rigid(a.LayoutGrblStatus),
 		layout.Rigid(a.LayoutDROCoords),
 		layout.Rigid(a.LayoutFeedSpeed),
 		layout.Rigid(func(gtx C) D {
@@ -25,8 +23,8 @@ func (a *App) LayoutDRO(gtx C) D {
 	)
 }
 
-func drawGrblStatus(th *material.Theme, gtx C, g *Grbl) D {
-	label := material.H4(th, g.Status)
+func (a *App) LayoutGrblStatus(gtx C) D {
+	label := material.H4(a.th, a.g.Status)
 	return label.Layout(gtx)
 }
 

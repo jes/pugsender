@@ -45,9 +45,11 @@ func NewGrbl(port io.ReadWriteCloser, portName string) *Grbl {
 	g := &Grbl{
 		SerialPort:   port,
 		PortName:     portName,
+		Status:       "Connecting",
 		StatusUpdate: make(chan struct{}),
 	}
 	if port == nil {
+		g.Status = "Disconnected"
 		g.Closed = true
 	}
 	return g
@@ -97,6 +99,7 @@ func (g *Grbl) Close() error {
 		return nil
 	}
 	g.Closed = true
+	g.Status = "Disconnected"
 	var err error
 	if g.SerialPort != nil {
 		err = g.SerialPort.Close()

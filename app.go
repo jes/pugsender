@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"gioui.org/app"
+	"gioui.org/font"
 	"gioui.org/font/gofont"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
@@ -24,15 +25,15 @@ import (
 type Mode int
 
 const (
-	ModeDisconnected Mode = iota
+	ModeConnect Mode = iota
 	ModeJog
 	ModeRun
 	ModeMDI
 )
 
 func (m Mode) String() string {
-	if m == ModeDisconnected {
-		return "DISCONNECTED"
+	if m == ModeConnect {
+		return "CON"
 	} else if m == ModeJog {
 		return "JOG"
 	} else if m == ModeRun {
@@ -59,7 +60,7 @@ type App struct {
 
 func NewApp() *App {
 	th := material.NewTheme()
-	th.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
+	th.Shaper = text.NewShaper(text.WithCollection(chooseFonts(gofont.Collection())))
 	th.Palette.Bg = color.NRGBA{R: 0, G: 0, B: 0, A: 255}
 	th.Palette.ContrastBg = color.NRGBA{R: 75, G: 150, B: 150, A: 255}
 	th.Palette.Fg = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
@@ -67,7 +68,7 @@ func NewApp() *App {
 
 	a := &App{
 		g:           NewGrbl(nil, "<nil>"),
-		mode:        ModeDisconnected,
+		mode:        ModeConnect,
 		th:          th,
 		autoConnect: true,
 	}
@@ -170,8 +171,8 @@ func (a *App) Connect(g *Grbl) {
 		for {
 			<-a.g.StatusUpdate
 			if a.g.Closed {
-				a.ResetMode(ModeDisconnected)
-			} else if a.mode == ModeDisconnected {
+				a.ResetMode(ModeConnect)
+			} else if a.mode == ModeConnect {
 				a.ResetMode(ModeJog)
 			}
 			a.w.Invalidate()
@@ -270,5 +271,19 @@ func (a *App) Label(text string) Label {
 	return Label{
 		text: text,
 		app:  a,
+	}
+}
+
+func chooseFonts(fonts []font.FontFace) []font.FontFace {
+	chosen := make([]font.FontFace, 0)
+	for _, font := range fonts {
+		if strings.Contains(strings.ToLower(string(font.Font.Typeface)), "mono") {
+			chosen = append(chosen, font)
+		}
+	}
+	if len(chosen) > 0 {
+		return chosen
+	} else {
+		return fonts
 	}
 }

@@ -1,0 +1,20 @@
+allow setting DRO
+save/restore coordinate system
+allow disabling autoconnect
+allow connecting to manually-typed serial port
+allow opening g-code
+efficient file browser
+allow setting jog increment & feed rate
+show key shortcuts
+show toolpath
+show current point of tool
+allow "jog to here"
+show coordinates when mouse over toolpath view
+"follow outline" of gcode file
+better ui for pause/resume etc.
+raw serial console
+MDI history
+sync/async grbl based on what is typed into MDI (or only allow actual synchronous gcode in MDI? but what about raw console?)
+mouse interface
+better indication of auto-connector behaviour (specifically, when it doesn't connect: why? and what did it try?)
+don't attempt jogging while mode is not "idle" or "jog"?

@@ -18,3 +18,5 @@ sync/async grbl based on what is typed into MDI (or only allow actual synchronou
 mouse interface
 better indication of auto-connector behaviour (specifically, when it doesn't connect: why? and what did it try?)
 don't attempt jogging while mode is not "idle" or "jog"?
+unlock an alarm
+show grbl's messages to user (alarm/error/other message)

@@ -5,8 +5,7 @@ allow connecting to manually-typed serial port
 allow opening g-code
 efficient file browser
 allow setting jog increment & feed rate
-show key shortcuts
-allow "jog to here"
+show key shortcuts & mouse operations
 show coordinates when mouse over toolpath view
 "follow outline" of gcode file
 better ui for pause/resume etc.
@@ -23,10 +22,9 @@ MDI history
 make the MDI all caps, automatically insert spaces between a number and a following letter (so "G0x0y0" becomes "G0 X0 Y0")
 show planned movements (and hide them again if sending is cancelled?)
 ctrl-scroll or ctrl-+/- or ctrl-0 to set font size
-show hovered coordinates in toolpath view
-"set work offset to here"
 reset toolpath view
 save settings to file
 don't draw lines on toolpath view when changing work offset
 zoom toolpath view to fit content
 fix click location offset (take pointer events from the dimensions of the image, instead of the panel)
+prevent submitting the MDI if there is nothing to submit to? (e.g. disconnected)

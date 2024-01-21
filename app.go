@@ -76,6 +76,7 @@ func NewApp() *App {
 	a.mdi = NewMDI(a)
 	a.jog = NewJogControl(a)
 	a.path = NewPath()
+	a.path.showEndpoint = true
 
 	var err error
 	a.img, err = loadImage("pugs.png")

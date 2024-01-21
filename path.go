@@ -3,6 +3,7 @@ package main
 import (
 	"image"
 	"image/color"
+	"math"
 
 	"github.com/llgcode/draw2d/draw2dimg"
 )
@@ -29,7 +30,8 @@ func (p *Path) Update(pos V4d) {
 func (p *Path) Render(w int, h int, centre V4d, pxPerMm float64) image.Image {
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
 
-	if len(p.positions) == 0 {
+	l := len(p.positions)
+	if l == 0 {
 		return img
 	}
 
@@ -42,7 +44,21 @@ func (p *Path) Render(w int, h int, centre V4d, pxPerMm float64) image.Image {
 	gc.Stroke()
 
 	if p.showEndpoint {
+		x := p.positions[l-1].X - centre.X
+		y := p.positions[l-1].Y - centre.Y
+		gc.SetStrokeColor(grey(128))
+		p.DrawCrossHair(gc, pxPerMm*x+float64(w/2), pxPerMm*y+float64(h/2), 20)
 	}
 
 	return img
+}
+
+func (p *Path) DrawCrossHair(gc *draw2dimg.GraphicContext, x, y, r float64) {
+	gc.MoveTo(x, y)
+	for angle := 0.0; angle <= 360; angle += 5 {
+		dx := r * math.Sin(angle*math.Pi/180.0)
+		dy := r * math.Cos(angle*math.Pi/180.0)
+		gc.LineTo(x+dx, y-dy)
+	}
+	gc.Stroke()
 }

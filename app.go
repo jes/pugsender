@@ -86,6 +86,7 @@ func NewApp() *App {
 	a.path = NewPath()
 	a.path.showCrossHair = true
 	a.path.showAxes = true
+	a.path.showGridLines = true
 
 	var err error
 	a.img, err = loadImage("pugs.png")

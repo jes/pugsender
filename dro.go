@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"gioui.org/layout"
 	"gioui.org/text"
@@ -27,7 +28,7 @@ func (a *App) LayoutDRO(gtx C) D {
 }
 
 func (a *App) LayoutGrblStatus(gtx C) D {
-	label := material.H4(a.th, a.g.Status)
+	label := material.H4(a.th, strings.ToUpper(a.g.Status))
 	label.Alignment = text.Middle
 	borderColour := grey(128)
 	return widget.Border{Width: 1, CornerRadius: 2, Color: borderColour}.Layout(gtx, func(gtx C) D {

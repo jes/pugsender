@@ -122,7 +122,11 @@ func (a *App) Run() {
 						keystate[gtxE.Name] = JogKeyRelease
 					}
 				case pointer.Event:
-					a.mdi.Defocus()
+					if gtxE.Kind == pointer.Press {
+						a.mdi.Defocus()
+					} else if gtxE.Kind == pointer.Scroll {
+						a.path.pxPerMm *= 1.0 - float64(gtxE.Scroll.Y)/100.0
+					}
 				}
 			}
 
@@ -153,8 +157,9 @@ func (a *App) Run() {
 			}.Add(gtx.Ops)
 
 			pointer.InputOp{
-				Kinds: pointer.Press,
-				Tag:   a,
+				Kinds:        pointer.Press | pointer.Scroll,
+				Tag:          a,
+				ScrollBounds: image.Rectangle{Min: image.Point{X: -500, Y: -500}, Max: image.Point{X: 500, Y: 500}},
 			}.Add(gtx.Ops)
 
 			// draw the application
@@ -226,7 +231,7 @@ func (a *App) Layout(gtx C) D {
 							// XXX: we should instead invalidate only when the rendering thread has a new plot to show
 							a.w.Invalidate()
 						}
-						img := a.path.Render(gtx.Constraints.Min.X, gtx.Constraints.Min.Y, V4d{}, 10.0)
+						img := a.path.Render(gtx.Constraints.Min.X, gtx.Constraints.Min.Y, V4d{})
 						im := widget.Image{
 							Src:   paint.NewImageOp(img),
 							Scale: 1.0 / gtx.Metric.PxPerDp,

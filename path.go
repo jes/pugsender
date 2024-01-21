@@ -13,10 +13,11 @@ type Path struct {
 	showAxes      bool
 	showCrossHair bool
 	crossHair     V4d
+	pxPerMm       float64
 }
 
 func NewPath() *Path {
-	return &Path{}
+	return &Path{pxPerMm: 10}
 }
 
 func (p *Path) Update(pos V4d) {
@@ -29,28 +30,28 @@ func (p *Path) Update(pos V4d) {
 // TODO: store the image we made, and next time we render
 // with the same parameters, only render the new points on
 // top, instead of starting from scratch every time
-func (p *Path) Render(w int, h int, centre V4d, pxPerMm float64) image.Image {
+func (p *Path) Render(w int, h int, centre V4d) image.Image {
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
 	gc := draw2dimg.NewGraphicContext(img)
 
 	if p.showAxes {
 		gc.SetStrokeColor(rgb(64, 0, 0))
-		gc.MoveTo(pxPerMm*(-centre.X)+float64(w/2), 0)
-		gc.LineTo(pxPerMm*(-centre.X)+float64(w/2), float64(h))
+		gc.MoveTo(p.pxPerMm*(-centre.X)+float64(w/2), 0)
+		gc.LineTo(p.pxPerMm*(-centre.X)+float64(w/2), float64(h))
 		gc.Stroke()
 
 		gc.SetStrokeColor(rgb(0, 64, 0))
-		gc.MoveTo(0, pxPerMm*(-centre.Y)+float64(h/2))
-		gc.LineTo(float64(w), pxPerMm*(-centre.Y)+float64(h/2))
+		gc.MoveTo(0, p.pxPerMm*(-centre.Y)+float64(h/2))
+		gc.LineTo(float64(w), p.pxPerMm*(-centre.Y)+float64(h/2))
 		gc.Stroke()
 	}
 
 	l := len(p.positions)
 	if l > 0 {
 		gc.SetStrokeColor(color.White)
-		gc.MoveTo(pxPerMm*(p.positions[0].X-centre.X)+float64(w/2), pxPerMm*(-p.positions[0].Y-centre.Y)+float64(h/2))
+		gc.MoveTo(p.pxPerMm*(p.positions[0].X-centre.X)+float64(w/2), p.pxPerMm*(-p.positions[0].Y-centre.Y)+float64(h/2))
 		for _, pos := range p.positions {
-			gc.LineTo(pxPerMm*(pos.X-centre.X)+float64(w/2), pxPerMm*(-pos.Y-centre.Y)+float64(h/2))
+			gc.LineTo(p.pxPerMm*(pos.X-centre.X)+float64(w/2), p.pxPerMm*(-pos.Y-centre.Y)+float64(h/2))
 		}
 		gc.Stroke()
 	}
@@ -59,7 +60,7 @@ func (p *Path) Render(w int, h int, centre V4d, pxPerMm float64) image.Image {
 		x := p.crossHair.X - centre.X
 		y := -p.crossHair.Y - centre.Y
 		gc.SetStrokeColor(grey(128))
-		p.DrawCrossHair(gc, pxPerMm*x+float64(w/2), pxPerMm*y+float64(h/2), 12)
+		p.DrawCrossHair(gc, p.pxPerMm*x+float64(w/2), p.pxPerMm*y+float64(h/2), 12)
 	}
 
 	return img

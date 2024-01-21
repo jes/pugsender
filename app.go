@@ -312,6 +312,8 @@ func (a *App) LayoutToolpath(gtx C) D {
 		}
 	})
 
+	// TODO: we really need to take pointer events from the image, rather than the container,
+	// because of the thickness of the border
 	defer clip.Rect(image.Rectangle{Max: dims.Size}).Push(gtx.Ops).Pop()
 	pointer.InputOp{
 		Kinds:        pointer.Scroll | pointer.Drag | pointer.Release | pointer.Move | pointer.Leave,

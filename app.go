@@ -232,7 +232,11 @@ func (a *App) LayoutToolpath(gtx C) D {
 	for _, gtxEvent := range gtx.Events(a.path) {
 		switch gtxE := gtxEvent.(type) {
 		case pointer.Event:
-			if gtxE.Kind == pointer.Scroll {
+			if gtxE.Kind == pointer.Press {
+				if gtxE.Modifiers.Contain(key.ModCtrl) {
+					a.jog.JogTo(a.path.PxToMm(float64(gtxE.Position.X), float64(gtxE.Position.Y)))
+				}
+			} else if gtxE.Kind == pointer.Scroll {
 				a.path.pxPerMm *= 1.0 - float64(gtxE.Scroll.Y)/100.0
 			} else if gtxE.Kind == pointer.Drag {
 				if !a.dragging {
@@ -261,7 +265,9 @@ func (a *App) LayoutToolpath(gtx C) D {
 			// XXX: we should instead invalidate only when the rendering thread has a new plot to show
 			a.w.Invalidate()
 		}
-		img := a.path.Render(gtx.Constraints.Min.X, gtx.Constraints.Min.Y)
+		a.path.widthPx = gtx.Constraints.Min.X
+		a.path.heightPx = gtx.Constraints.Min.Y
+		img := a.path.Render()
 		im := widget.Image{
 			Src:   paint.NewImageOp(img),
 			Scale: 1.0 / gtx.Metric.PxPerDp,
@@ -271,7 +277,7 @@ func (a *App) LayoutToolpath(gtx C) D {
 
 	defer clip.Rect(image.Rectangle{Max: dims.Size}).Push(gtx.Ops).Pop()
 	pointer.InputOp{
-		Kinds:        pointer.Scroll | pointer.Drag | pointer.Release,
+		Kinds:        pointer.Press | pointer.Scroll | pointer.Drag | pointer.Release,
 		Tag:          a.path,
 		ScrollBounds: image.Rectangle{Min: image.Point{X: -50, Y: -50}, Max: image.Point{X: 50, Y: 50}},
 	}.Add(gtx.Ops)

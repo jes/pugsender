@@ -112,10 +112,6 @@ func (j *JogControl) SingleContinuous() {
 }
 
 func (j *JogControl) Incremental(axis string, dir int) {
-	// TODO: sending incremental jogs with g.Write() instead of
-	// g.Command() means the responses to the continuous jog
-	// commands will be out of sync with the commands, but it
-	// seems to work anyway
 	c := j.app.g.Command(fmt.Sprintf("$J=G91%s%.3fF%.3f", axis, float64(dir)*j.Increment, j.FeedRate))
 	if c != nil {
 		j.HaveJogged = true
@@ -126,6 +122,15 @@ func (j *JogControl) Incremental(axis string, dir int) {
 func (j *JogControl) StartContinuous(axis string, dir int) {
 	j.Cancel()
 	j.SingleContinuous()
+}
+
+func (j *JogControl) JogTo(x, y float64) {
+	j.Cancel()
+	c := j.app.g.Command(fmt.Sprintf("$J=G90X%.3fY%.3fF%.3f", x, y, j.FeedRate))
+	if c != nil {
+		j.HaveJogged = true
+		go func() { <-c }() // XXX: ignore response
+	}
 }
 
 func (j *JogControl) Update(newKeyState map[string]JogKeyState) {

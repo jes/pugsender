@@ -20,3 +20,4 @@ unlock an alarm
 show grbl's messages to user (alarm/error/other message)
 overrides
 MDI history
+make the MDI all caps, automatically insert spaces between a number and a following letter (so "G0x0y0" becomes "G0 X0 Y0")

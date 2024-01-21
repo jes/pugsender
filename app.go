@@ -76,7 +76,7 @@ func NewApp() *App {
 	a.mdi = NewMDI(a)
 	a.jog = NewJogControl(a)
 	a.path = NewPath()
-	a.path.showEndpoint = true
+	a.path.showCrossHair = true
 
 	var err error
 	a.img, err = loadImage("pugs.png")
@@ -194,7 +194,8 @@ func (a *App) Layout(gtx C) D {
 		a.PopMode()
 	}
 
-	a.path.Update(a.g.WposExt())
+	a.path.Update(a.g.Wpos)
+	a.path.crossHair = a.g.WposExt()
 
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Flexed(1, func(gtx C) D {

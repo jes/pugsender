@@ -114,8 +114,8 @@ func (g *Grbl) Monitor() {
 		return
 	}
 
-	// ask for a status update every 200ms, until Closed
-	ticker := time.NewTicker(200 * time.Millisecond)
+	// ask for a status update every 100ms, until Closed
+	ticker := time.NewTicker(100 * time.Millisecond)
 	g.RequestStatusUpdate()
 	go func() {
 		for {

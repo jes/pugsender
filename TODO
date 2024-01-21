@@ -22,3 +22,5 @@ overrides
 MDI history
 make the MDI all caps, automatically insert spaces between a number and a following letter (so "G0x0y0" becomes "G0 X0 Y0")
 show planned movements (and hide them again if sending is cancelled?)
+ctrl-scroll or ctrl-+/- or ctrl-0 to set font size
+show hovered coordinates in toolpath view

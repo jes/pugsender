@@ -195,16 +195,6 @@ func (a *App) Connect(g *Grbl) {
 }
 
 func (a *App) Layout(gtx C) D {
-	if a.mdi.editor.Focused() && a.mode != ModeMDI {
-		a.PushMode(ModeMDI)
-	}
-	if !a.mdi.editor.Focused() && a.mode == ModeMDI {
-		a.PopMode()
-	}
-
-	a.path.Update(a.g.Wpos)
-	a.path.crossHair = a.g.WposExt()
-
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Flexed(1, func(gtx C) D {
 			return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
@@ -223,12 +213,26 @@ func (a *App) Layout(gtx C) D {
 				layout.Flexed(1, a.LayoutToolpath),
 			)
 		}),
-		layout.Rigid(a.mdi.Layout),
+		layout.Rigid(a.LayoutMDI),
 		layout.Rigid(a.LayoutStatusBar),
 	)
 }
 
+func (a *App) LayoutMDI(gtx C) D {
+	if a.mdi.editor.Focused() && a.mode != ModeMDI {
+		a.PushMode(ModeMDI)
+	}
+	if !a.mdi.editor.Focused() && a.mode == ModeMDI {
+		a.PopMode()
+	}
+
+	return a.mdi.Layout(gtx)
+}
+
 func (a *App) LayoutToolpath(gtx C) D {
+	a.path.Update(a.g.Wpos)
+	a.path.crossHair = a.g.WposExt()
+
 	for _, gtxEvent := range gtx.Events(a.path) {
 		switch gtxE := gtxEvent.(type) {
 		case pointer.Event:

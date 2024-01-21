@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"gioui.org/layout"
+	"gioui.org/text"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 )
@@ -29,18 +30,15 @@ func (a *App) LayoutDRO(gtx C) D {
 
 func (a *App) LayoutGrblStatus(gtx C) D {
 	label := material.H4(a.th, a.g.Status)
+	label.Alignment = text.Middle
 	borderColour := color.NRGBA{R: 128, G: 128, B: 128, A: 255}
-	return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
-		layout.Rigid(func(gtx C) D {
-			return widget.Border{Width: 1, CornerRadius: 2, Color: borderColour}.Layout(gtx, func(gtx C) D {
-				return LayoutColour(gtx, color.NRGBA{R: 32, G: 32, B: 32, A: 255}, func(gtx C) D {
-					return layout.UniformInset(5).Layout(gtx, func(gtx C) D {
-						return label.Layout(gtx)
-					})
-				})
+	return widget.Border{Width: 1, CornerRadius: 2, Color: borderColour}.Layout(gtx, func(gtx C) D {
+		return LayoutColour(gtx, color.NRGBA{R: 32, G: 32, B: 32, A: 255}, func(gtx C) D {
+			return layout.UniformInset(5).Layout(gtx, func(gtx C) D {
+				return label.Layout(gtx)
 			})
-		}),
-	)
+		})
+	})
 }
 
 func (a *App) LayoutDROCoords(gtx C) D {

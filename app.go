@@ -19,6 +19,7 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/text"
 	"gioui.org/unit"
+	"gioui.org/widget"
 	"gioui.org/widget/material"
 )
 
@@ -53,6 +54,7 @@ type App struct {
 	modeStack   []Mode
 	autoConnect bool
 	jog         JogControl
+	path        *Path
 
 	img image.Image
 	mdi *MDI
@@ -74,6 +76,7 @@ func NewApp() *App {
 	}
 	a.mdi = NewMDI(a)
 	a.jog = NewJogControl(a)
+	a.path = NewPath()
 
 	var err error
 	a.img, err = loadImage("pugs.png")
@@ -178,6 +181,8 @@ func (a *App) Connect(g *Grbl) {
 			a.w.Invalidate()
 			if a.g.Closed {
 				return
+			} else {
+				a.path.Update(g.Wpos)
 			}
 		}
 	}()
@@ -192,7 +197,25 @@ func (a *App) Layout(gtx C) D {
 	}
 
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-		layout.Flexed(1, a.LayoutDRO),
+		layout.Flexed(1, func(gtx C) D {
+			return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+				layout.Flexed(0.25, func(gtx C) D {
+					return a.LayoutDRO(gtx)
+				}),
+				layout.Flexed(0.75, func(gtx C) D {
+					// TODO: render in a different thread
+					// TODO: panning, zooming
+					// TODO: "jog to here"
+					// TODO: show coordinates of hovered point
+					img := a.path.Render(gtx.Constraints.Min.X, gtx.Constraints.Min.Y, V4d{}, 10.0)
+					im := widget.Image{
+						Src:   paint.NewImageOp(img),
+						Scale: 1.0 / gtx.Metric.PxPerDp,
+					}
+					return im.Layout(gtx)
+				}),
+			)
+		}),
 		layout.Rigid(a.mdi.Layout),
 		layout.Rigid(a.LayoutStatusBar),
 	)

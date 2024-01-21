@@ -285,8 +285,7 @@ func (a *App) ResetMode(m Mode) {
 }
 
 func (a *App) KeyPress(e key.Event) {
-	if a.mode == ModeJog {
-		// JOG MODE
+	if a.mode == ModeJog || a.mode == ModeConnect {
 		if e.Name == "G" || e.Name == "M" {
 			// enter MDI
 			if a.mdi.editor.Text() == "" {
@@ -295,7 +294,10 @@ func (a *App) KeyPress(e key.Event) {
 			}
 			a.mdi.editor.Focus()
 			a.PushMode(ModeMDI)
-		} else if e.Name == "H" {
+		}
+	} else if a.mode == ModeJog {
+		// JOG MODE
+		if e.Name == "H" {
 			// feed hold
 			a.g.Write([]byte{'!'})
 		} else if e.Name == "R" {

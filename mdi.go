@@ -41,12 +41,8 @@ func (m *MDI) Layout(gtx C) D {
 		}
 	}
 
-	m.editor.ReadOnly = (m.app.mode == ModeConnect)
-
 	borderColour := grey(255)
-	if m.editor.ReadOnly {
-		borderColour = grey(100)
-	} else if !m.editor.Focused() {
+	if !m.editor.Focused() {
 		borderColour = grey(128)
 	}
 

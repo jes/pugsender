@@ -269,7 +269,7 @@ func (g *Grbl) ParseStatus(status string) {
 	g.UpdateTime = time.Now()
 
 	distanceMoved := g.Wpos.Sub(prevWpos)
-	g.Vel = distanceMoved.Div(g.UpdateTime.Sub(prevUpdateTime).Seconds())
+	g.Vel = distanceMoved.Div(g.UpdateTime.Sub(prevUpdateTime).Minutes())
 
 	g.StatusUpdate <- struct{}{}
 }

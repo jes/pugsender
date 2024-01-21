@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"gioui.org/app"
+	"gioui.org/f32"
 	"gioui.org/font"
 	"gioui.org/font/gofont"
 	"gioui.org/io/key"
@@ -54,6 +55,10 @@ type App struct {
 	autoConnect bool
 	jog         JogControl
 	path        *Path
+
+	dragStart       f32.Point
+	dragStartCentre V4d
+	dragging        bool
 
 	img image.Image
 	mdi *MDI
@@ -126,6 +131,17 @@ func (a *App) Run() {
 						a.mdi.Defocus()
 					} else if gtxE.Kind == pointer.Scroll {
 						a.path.pxPerMm *= 1.0 - float64(gtxE.Scroll.Y)/100.0
+					} else if gtxE.Kind == pointer.Drag {
+						if !a.dragging {
+							a.dragging = true
+							a.dragStart = gtxE.Position
+							a.dragStartCentre = a.path.centre
+						}
+						origCentre := f32.Point{X: float32(a.dragStartCentre.X), Y: float32(a.dragStartCentre.Y)}
+						newCentre := origCentre.Add((a.dragStart.Sub(gtxE.Position)).Div(float32(a.path.pxPerMm)))
+						a.path.centre = V4d{X: float64(newCentre.X), Y: float64(newCentre.Y)}
+					} else if gtxE.Kind == pointer.Release {
+						a.dragging = false
 					}
 				}
 			}
@@ -156,10 +172,11 @@ func (a *App) Run() {
 				Tag:  a,
 			}.Add(gtx.Ops)
 
+			// TODO: scroll/drag/release of toolpath view should only be active when mouse is on toolpath view
 			pointer.InputOp{
-				Kinds:        pointer.Press | pointer.Scroll,
+				Kinds:        pointer.Press | pointer.Scroll | pointer.Drag | pointer.Release,
 				Tag:          a,
-				ScrollBounds: image.Rectangle{Min: image.Point{X: -500, Y: -500}, Max: image.Point{X: 500, Y: 500}},
+				ScrollBounds: image.Rectangle{Min: image.Point{X: -50, Y: -50}, Max: image.Point{X: 50, Y: 50}},
 			}.Add(gtx.Ops)
 
 			// draw the application
@@ -231,7 +248,7 @@ func (a *App) Layout(gtx C) D {
 							// XXX: we should instead invalidate only when the rendering thread has a new plot to show
 							a.w.Invalidate()
 						}
-						img := a.path.Render(gtx.Constraints.Min.X, gtx.Constraints.Min.Y, V4d{})
+						img := a.path.Render(gtx.Constraints.Min.X, gtx.Constraints.Min.Y)
 						im := widget.Image{
 							Src:   paint.NewImageOp(img),
 							Scale: 1.0 / gtx.Metric.PxPerDp,

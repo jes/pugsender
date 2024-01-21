@@ -63,7 +63,7 @@ func (p *Path) Render() image.Image {
 
 	if p.showCrossHair {
 		gc.SetStrokeColor(grey(128))
-		x, y := p.MmToPx(p.centre.X, p.centre.Y)
+		x, y := p.MmToPx(p.crossHair.X, p.crossHair.Y)
 		p.DrawCrossHair(gc, x, y, 12)
 	}
 

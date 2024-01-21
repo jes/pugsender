@@ -85,6 +85,19 @@ func (g *Grbl) Command(line string) chan string {
 	return responseChan
 }
 
+// add the given line to the command queue, return true if
+// successful or false if not
+//
+// spawn a goroutine to consume and ignore the response
+func (g *Grbl) CommandIgnore(line string) bool {
+	c := g.Command(line)
+	if c == nil {
+		return false
+	}
+	go func() { <-c }() // ignore response
+	return true
+}
+
 // implements io.Writer
 func (g *Grbl) Write(p []byte) (n int, err error) {
 	// TODO: is there a race condition where concurrent writes can end up interleaved?
@@ -178,15 +191,10 @@ func (g *Grbl) RequestGCodes() bool {
 		return false
 	}
 	// TODO: also request gcodes whenever we think they might have changed?
-	c := g.Command("$G")
-	if c == nil {
-		if g.Closed {
-			return false
-		} else {
-			return true
-		}
+	ok := g.CommandIgnore("$G")
+	if !ok && g.Closed {
+		return false
 	}
-	go func() { <-c }() // XXX: ignore response
 	return true
 }
 

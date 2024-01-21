@@ -112,10 +112,9 @@ func (j *JogControl) SingleContinuous() {
 }
 
 func (j *JogControl) Incremental(axis string, dir int) {
-	c := j.app.g.Command(fmt.Sprintf("$J=G91%s%.3fF%.3f", axis, float64(dir)*j.Increment, j.FeedRate))
-	if c != nil {
+	ok := j.app.g.CommandIgnore(fmt.Sprintf("$J=G91%s%.3fF%.3f", axis, float64(dir)*j.Increment, j.FeedRate))
+	if ok {
 		j.HaveJogged = true
-		go func() { <-c }() // XXX: ignore response
 	}
 }
 
@@ -126,10 +125,9 @@ func (j *JogControl) StartContinuous(axis string, dir int) {
 
 func (j *JogControl) JogTo(x, y float64) {
 	j.Cancel()
-	c := j.app.g.Command(fmt.Sprintf("$J=G90X%.3fY%.3fF%.3f", x, y, j.FeedRate))
-	if c != nil {
+	ok := j.app.g.CommandIgnore(fmt.Sprintf("$J=G90X%.3fY%.3fF%.3f", x, y, j.FeedRate))
+	if ok {
 		j.HaveJogged = true
-		go func() { <-c }() // XXX: ignore response
 	}
 }
 

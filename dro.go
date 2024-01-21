@@ -46,9 +46,9 @@ func (a *App) LayoutDROCoords(gtx C) D {
 		a.w.Invalidate()
 	}
 
-	readout := Readout{th: a.th, decimalPlaces: 3, TextSize: material.H4(a.th, "").TextSize}
+	readout := Readout{th: a.th, decimalPlaces: 3, TextSize: material.H4(a.th, "").TextSize, BackgroundColor: grey(0)}
 
-	return Panel{Width: 1, Color: grey(128), CornerRadius: 5, Padding: 5, BackgroundColor: grey(0)}.Layout(gtx, func(gtx C) D {
+	return Panel{Width: 1, Color: grey(128), CornerRadius: 5, Padding: 5, BackgroundColor: grey(32)}.Layout(gtx, func(gtx C) D {
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 			layout.Rigid(func(gtx C) D {
 				return readout.Layout(gtx, "X", a.g.WposExt().X)
@@ -64,7 +64,7 @@ func (a *App) LayoutDROCoords(gtx C) D {
 }
 
 func (a *App) LayoutFeedSpeed(gtx C) D {
-	readout := Readout{th: a.th, TextSize: material.H5(a.th, "").TextSize}
+	readout := Readout{th: a.th, TextSize: material.H5(a.th, "").TextSize, BackgroundColor: grey(0)}
 
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx C) D {

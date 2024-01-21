@@ -10,6 +10,7 @@ import (
 
 type Path struct {
 	positions     []V4d
+	showAxes      bool
 	showCrossHair bool
 	crossHair     V4d
 }
@@ -30,19 +31,29 @@ func (p *Path) Update(pos V4d) {
 // top, instead of starting from scratch every time
 func (p *Path) Render(w int, h int, centre V4d, pxPerMm float64) image.Image {
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	gc := draw2dimg.NewGraphicContext(img)
+
+	if p.showAxes {
+		gc.SetStrokeColor(rgb(64, 0, 0))
+		gc.MoveTo(pxPerMm*(-centre.X)+float64(w/2), 0)
+		gc.LineTo(pxPerMm*(-centre.X)+float64(w/2), float64(h))
+		gc.Stroke()
+
+		gc.SetStrokeColor(rgb(0, 64, 0))
+		gc.MoveTo(0, pxPerMm*(-centre.Y)+float64(h/2))
+		gc.LineTo(float64(w), pxPerMm*(-centre.Y)+float64(h/2))
+		gc.Stroke()
+	}
 
 	l := len(p.positions)
-	if l == 0 {
-		return img
+	if l > 0 {
+		gc.SetStrokeColor(color.White)
+		gc.MoveTo(pxPerMm*(p.positions[0].X-centre.X)+float64(w/2), pxPerMm*(-p.positions[0].Y-centre.Y)+float64(h/2))
+		for _, pos := range p.positions {
+			gc.LineTo(pxPerMm*(pos.X-centre.X)+float64(w/2), pxPerMm*(-pos.Y-centre.Y)+float64(h/2))
+		}
+		gc.Stroke()
 	}
-
-	gc := draw2dimg.NewGraphicContext(img)
-	gc.SetStrokeColor(color.White)
-	gc.MoveTo(pxPerMm*(p.positions[0].X-centre.X)+float64(w/2), pxPerMm*(-p.positions[0].Y-centre.Y)+float64(h/2))
-	for _, pos := range p.positions {
-		gc.LineTo(pxPerMm*(pos.X-centre.X)+float64(w/2), pxPerMm*(-pos.Y-centre.Y)+float64(h/2))
-	}
-	gc.Stroke()
 
 	if p.showCrossHair {
 		x := p.crossHair.X - centre.X

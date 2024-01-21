@@ -77,6 +77,7 @@ func NewApp() *App {
 	a.jog = NewJogControl(a)
 	a.path = NewPath()
 	a.path.showCrossHair = true
+	a.path.showAxes = true
 
 	var err error
 	a.img, err = loadImage("pugs.png")

@@ -29,9 +29,10 @@ type Label struct {
 }
 
 type Readout struct {
-	th            *material.Theme
-	TextSize      unit.Sp
-	decimalPlaces int
+	th              *material.Theme
+	TextSize        unit.Sp
+	decimalPlaces   int
+	BackgroundColor color.NRGBA
 }
 
 // draw widget with the given background colour
@@ -111,7 +112,7 @@ func (r Readout) Layout(gtx C, name string, value float64) D {
 		layout.Rigid(nameLabel.Layout),
 		layout.Rigid(layout.Spacer{Width: 10}.Layout),
 		layout.Flexed(1, func(gtx C) D {
-			return Panel{Width: 1, Color: grey(128), CornerRadius: 5, BackgroundColor: grey(32), Margin: 2}.Layout(gtx, valueLabel.Layout)
+			return Panel{Width: 1, Color: grey(128), CornerRadius: 5, BackgroundColor: r.BackgroundColor, Margin: 2}.Layout(gtx, valueLabel.Layout)
 		}),
 	)
 

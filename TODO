@@ -20,3 +20,5 @@ better indication of auto-connector behaviour (specifically, when it doesn't con
 don't attempt jogging while mode is not "idle" or "jog"?
 unlock an alarm
 show grbl's messages to user (alarm/error/other message)
+overrides
+MDI history

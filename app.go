@@ -54,11 +54,14 @@ type App struct {
 	modeStack   []Mode
 	autoConnect bool
 	jog         JogControl
-	path        *Path
 
+	// TODO: move this toolpath stuff into a separate object
+	path            *Path
 	dragStart       f32.Point
 	dragStartCentre V4d
 	dragging        bool
+	hovering        bool
+	hoverPoint      V4d
 
 	img image.Image
 	mdi *MDI
@@ -236,11 +239,7 @@ func (a *App) LayoutToolpath(gtx C) D {
 	for _, gtxEvent := range gtx.Events(a.path) {
 		switch gtxE := gtxEvent.(type) {
 		case pointer.Event:
-			if gtxE.Kind == pointer.Press {
-				if gtxE.Modifiers.Contain(key.ModCtrl) {
-					a.jog.JogTo(a.path.PxToMm(float64(gtxE.Position.X), float64(gtxE.Position.Y)))
-				}
-			} else if gtxE.Kind == pointer.Scroll {
+			if gtxE.Kind == pointer.Scroll {
 				a.path.pxPerMm *= 1.0 - float64(gtxE.Scroll.Y)/100.0
 			} else if gtxE.Kind == pointer.Drag {
 				if !a.dragging {
@@ -252,9 +251,17 @@ func (a *App) LayoutToolpath(gtx C) D {
 				newCentre := origCentre.Add((a.dragStart.Sub(gtxE.Position)).Div(float32(a.path.pxPerMm)))
 				a.path.centre = V4d{X: float64(newCentre.X), Y: float64(newCentre.Y)}
 			} else if gtxE.Kind == pointer.Release {
+				if !a.dragging && gtxE.Modifiers.Contain(key.ModCtrl) {
+					a.jog.JogTo(a.path.PxToMm(float64(gtxE.Position.X), float64(gtxE.Position.Y)))
+				}
 				a.dragging = false
+			} else if gtxE.Kind == pointer.Move {
+				a.hovering = true
+			} else if gtxE.Kind == pointer.Leave {
+				a.hovering = false
 			}
-
+			x, y := a.path.PxToMm(float64(gtxE.Position.X), float64(gtxE.Position.Y))
+			a.hoverPoint = V4d{X: x, Y: y}
 		}
 	}
 
@@ -276,12 +283,21 @@ func (a *App) LayoutToolpath(gtx C) D {
 			Src:   paint.NewImageOp(img),
 			Scale: 1.0 / gtx.Metric.PxPerDp,
 		}
-		return im.Layout(gtx)
+		if a.hovering {
+			return layout.Stack{Alignment: layout.SE}.Layout(gtx,
+				layout.Expanded(im.Layout),
+				layout.Stacked(func(gtx C) D {
+					return material.H6(a.th, fmt.Sprintf("X%.03f Y%.03f", a.hoverPoint.X, a.hoverPoint.Y)).Layout(gtx)
+				}),
+			)
+		} else {
+			return im.Layout(gtx)
+		}
 	})
 
 	defer clip.Rect(image.Rectangle{Max: dims.Size}).Push(gtx.Ops).Pop()
 	pointer.InputOp{
-		Kinds:        pointer.Press | pointer.Scroll | pointer.Drag | pointer.Release,
+		Kinds:        pointer.Scroll | pointer.Drag | pointer.Release | pointer.Move | pointer.Leave,
 		Tag:          a.path,
 		ScrollBounds: image.Rectangle{Min: image.Point{X: -50, Y: -50}, Max: image.Point{X: 50, Y: 50}},
 	}.Add(gtx.Ops)

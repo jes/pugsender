@@ -7,8 +7,19 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"gioui.org/unit"
+	"gioui.org/widget"
 	"gioui.org/widget/material"
 )
+
+type Panel struct {
+	Width           unit.Dp     // of border
+	CornerRadius    unit.Dp     // of border
+	Color           color.NRGBA // of border
+	BackgroundColor color.NRGBA
+	Margin          unit.Dp // outside the border
+	Padding         unit.Dp // inside the border
+}
 
 // draw widget with the given background colour
 func LayoutColour(gtx C, col color.NRGBA, widget layout.Widget) D {
@@ -30,8 +41,8 @@ func LayoutProgressBar(gtx C, progress float64, th *material.Theme, text string)
 		return layout.Dimensions{Size: d}
 	}
 
-	colour1 := color.NRGBA{R: 128, G: 128, B: 128, A: 255}
-	colour2 := color.NRGBA{R: 255, G: 255, B: 255, A: 255}
+	colour1 := grey(128)
+	colour2 := grey(255)
 
 	progressBarWidth := 100
 	return layout.Stack{Alignment: layout.Center}.Layout(gtx,
@@ -49,4 +60,34 @@ func LayoutProgressBar(gtx C, progress float64, th *material.Theme, text string)
 		}),
 		layout.Expanded(material.H6(th, text).Layout),
 	)
+}
+
+func (p Panel) Layout(gtx C, w layout.Widget) D {
+	if p.BackgroundColor.A > 0 {
+		return layout.UniformInset(p.Margin).Layout(gtx, func(gtx C) D {
+			return widget.Border{Width: p.Width, CornerRadius: p.CornerRadius, Color: p.Color}.Layout(gtx, func(gtx C) D {
+				return LayoutColour(gtx, p.BackgroundColor, func(gtx C) D {
+					return layout.UniformInset(p.Padding).Layout(gtx, w)
+				})
+			})
+		})
+	} else {
+		return layout.UniformInset(p.Margin).Layout(gtx, func(gtx C) D {
+			return widget.Border{Width: p.Width, CornerRadius: p.CornerRadius, Color: p.Color}.Layout(gtx, func(gtx C) D {
+				return layout.UniformInset(p.Padding).Layout(gtx, w)
+			})
+		})
+	}
+}
+
+func rgb(r uint8, g uint8, b uint8) color.NRGBA {
+	return color.NRGBA{R: r, G: g, B: b, A: 255}
+}
+
+func rgba(r uint8, g uint8, b uint8, a uint8) color.NRGBA {
+	return color.NRGBA{R: r, G: g, B: b, A: a}
+}
+
+func grey(v uint8) color.NRGBA {
+	return rgb(v, v, v)
 }

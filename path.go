@@ -8,7 +8,8 @@ import (
 )
 
 type Path struct {
-	positions []V4d
+	positions    []V4d
+	showEndpoint bool
 }
 
 func NewPath() *Path {
@@ -36,6 +37,9 @@ func (p *Path) Render(w int, h int, centre V4d, pxPerMm float64) image.Image {
 		gc.LineTo(pxPerMm*(pos.X-centre.X)+float64(w/2), pxPerMm*(-pos.Y-centre.Y)+float64(h/2))
 	}
 	gc.Stroke()
+
+	if p.showEndpoint {
+	}
 
 	return img
 }

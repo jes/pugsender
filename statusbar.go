@@ -1,15 +1,13 @@
 package main
 
 import (
-	"image/color"
-
 	"gioui.org/layout"
 	"gioui.org/widget/material"
 )
 
 func (a *App) LayoutStatusBar(gtx C) D {
 	// TODO: stop hard-coding colours everywhere, make the app have a theme that is more expansive than material.Theme
-	return LayoutColour(gtx, color.NRGBA{R: 32, G: 32, B: 32, A: 255}, func(gtx C) D {
+	return LayoutColour(gtx, grey(32), func(gtx C) D {
 		return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
 			layout.Rigid(layout.Spacer{Width: 4}.Layout),
 			layout.Rigid(func(gtx C) D {

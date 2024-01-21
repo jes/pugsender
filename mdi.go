@@ -2,10 +2,8 @@ package main
 
 import (
 	"fmt"
-	"image/color"
 
 	"gioui.org/io/key"
-	"gioui.org/layout"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 )
@@ -45,21 +43,19 @@ func (m *MDI) Layout(gtx C) D {
 
 	m.editor.ReadOnly = (m.app.mode == ModeConnect)
 
-	borderColour := color.NRGBA{R: 255, G: 255, B: 255, A: 255}
+	borderColour := grey(255)
 	if m.editor.ReadOnly {
-		borderColour = color.NRGBA{R: 100, G: 100, B: 100, A: 255}
+		borderColour = grey(100)
 	} else if !m.editor.Focused() {
-		borderColour = color.NRGBA{R: 128, G: 128, B: 128, A: 255}
+		borderColour = grey(128)
 	}
 
-	return widget.Border{Width: 1, CornerRadius: 2, Color: borderColour}.Layout(gtx, func(gtx C) D {
-		return layout.UniformInset(5).Layout(gtx, func(gtx C) D {
-			ed := material.Editor(m.app.th, m.editor, "")
-			if m.wantDefocus {
-				key.FocusOp{}.Add(gtx.Ops)
-				m.wantDefocus = false
-			}
-			return ed.Layout(gtx)
-		})
+	return Panel{Margin: 5, Width: 1, CornerRadius: 2, Color: borderColour, Padding: 5}.Layout(gtx, func(gtx C) D {
+		ed := material.Editor(m.app.th, m.editor, "")
+		if m.wantDefocus {
+			key.FocusOp{}.Add(gtx.Ops)
+			m.wantDefocus = false
+		}
+		return ed.Layout(gtx)
 	})
 }

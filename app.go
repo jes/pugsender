@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"image"
-	"image/color"
 	"os"
 	"strings"
 
@@ -63,10 +62,10 @@ type App struct {
 func NewApp() *App {
 	th := material.NewTheme()
 	th.Shaper = text.NewShaper(text.WithCollection(chooseFonts(gofont.Collection())))
-	th.Palette.Bg = color.NRGBA{R: 0, G: 0, B: 0, A: 255}
-	th.Palette.ContrastBg = color.NRGBA{R: 75, G: 150, B: 150, A: 255}
-	th.Palette.Fg = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
-	th.Palette.ContrastFg = color.NRGBA{R: 100, G: 255, B: 255, A: 255}
+	th.Palette.Bg = grey(0)
+	th.Palette.ContrastBg = rgb(75, 150, 150)
+	th.Palette.Fg = grey(255)
+	th.Palette.ContrastFg = rgb(100, 255, 255)
 
 	a := &App{
 		g:           NewGrbl(nil, "<nil>"),
@@ -200,19 +199,24 @@ func (a *App) Layout(gtx C) D {
 		layout.Flexed(1, func(gtx C) D {
 			return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 				layout.Flexed(0.25, func(gtx C) D {
-					return a.LayoutDRO(gtx)
+					return Panel{Width: 1, Color: grey(128), Margin: 5, Padding: 5, BackgroundColor: grey(16), CornerRadius: 5}.Layout(gtx, func(gtx C) D {
+						return a.LayoutDRO(gtx)
+					})
 				}),
 				layout.Flexed(0.75, func(gtx C) D {
-					// TODO: render in a different thread
-					// TODO: panning, zooming
-					// TODO: "jog to here"
-					// TODO: show coordinates of hovered point
-					img := a.path.Render(gtx.Constraints.Min.X, gtx.Constraints.Min.Y, V4d{}, 10.0)
-					im := widget.Image{
-						Src:   paint.NewImageOp(img),
-						Scale: 1.0 / gtx.Metric.PxPerDp,
-					}
-					return im.Layout(gtx)
+					borderColour := rgb(128, 128, 128)
+					return Panel{Margin: 5, Width: 1, CornerRadius: 5, Color: borderColour}.Layout(gtx, func(gtx C) D {
+						// TODO: render in a different thread
+						// TODO: panning, zooming
+						// TODO: "jog to here"
+						// TODO: show coordinates of hovered point
+						img := a.path.Render(gtx.Constraints.Min.X, gtx.Constraints.Min.Y, V4d{}, 10.0)
+						im := widget.Image{
+							Src:   paint.NewImageOp(img),
+							Scale: 1.0 / gtx.Metric.PxPerDp,
+						}
+						return im.Layout(gtx)
+					})
 				}),
 			)
 		}),

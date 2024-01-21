@@ -43,6 +43,14 @@ func LayoutColour(gtx C, col color.NRGBA, widget layout.Widget) D {
 	}, widget)
 }
 
+func LayoutColourRR(gtx C, col color.NRGBA, rr int, widget layout.Widget) D {
+	return layout.Background{}.Layout(gtx, func(gtx C) D {
+		paint.FillShape(gtx.Ops, col, clip.UniformRRect(image.Rectangle{Max: gtx.Constraints.Min}, 5).Op(gtx.Ops))
+		return D{Size: gtx.Constraints.Min}
+	}, widget)
+
+}
+
 // based on material.ProgressBar
 func LayoutProgressBar(gtx C, progress float64, th *material.Theme, text string) D {
 	shader := func(width int, color color.NRGBA) layout.Dimensions {
@@ -80,7 +88,7 @@ func (p Panel) Layout(gtx C, w layout.Widget) D {
 	if p.BackgroundColor.A > 0 {
 		return layout.UniformInset(p.Margin).Layout(gtx, func(gtx C) D {
 			return widget.Border{Width: p.Width, CornerRadius: p.CornerRadius, Color: p.Color}.Layout(gtx, func(gtx C) D {
-				return LayoutColour(gtx, p.BackgroundColor, func(gtx C) D {
+				return LayoutColourRR(gtx, p.BackgroundColor, gtx.Metric.Dp(p.CornerRadius), func(gtx C) D {
 					return layout.UniformInset(p.Padding).Layout(gtx, w)
 				})
 			})

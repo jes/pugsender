@@ -119,7 +119,7 @@ func (r Readout) Layout(gtx C, name string, value float64) D {
 }
 
 func rgb(r uint8, g uint8, b uint8) color.NRGBA {
-	return color.NRGBA{R: r, G: g, B: b, A: 255}
+	return rgba(r, g, b, 255)
 }
 
 func rgba(r uint8, g uint8, b uint8, a uint8) color.NRGBA {

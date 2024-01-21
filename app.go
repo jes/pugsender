@@ -129,19 +129,6 @@ func (a *App) Run() {
 				case pointer.Event:
 					if gtxE.Kind == pointer.Press {
 						a.mdi.Defocus()
-					} else if gtxE.Kind == pointer.Scroll {
-						a.path.pxPerMm *= 1.0 - float64(gtxE.Scroll.Y)/100.0
-					} else if gtxE.Kind == pointer.Drag {
-						if !a.dragging {
-							a.dragging = true
-							a.dragStart = gtxE.Position
-							a.dragStartCentre = a.path.centre
-						}
-						origCentre := f32.Point{X: float32(a.dragStartCentre.X), Y: float32(a.dragStartCentre.Y)}
-						newCentre := origCentre.Add((a.dragStart.Sub(gtxE.Position)).Div(float32(a.path.pxPerMm)))
-						a.path.centre = V4d{X: float64(newCentre.X), Y: float64(newCentre.Y)}
-					} else if gtxE.Kind == pointer.Release {
-						a.dragging = false
 					}
 				}
 			}
@@ -172,11 +159,9 @@ func (a *App) Run() {
 				Tag:  a,
 			}.Add(gtx.Ops)
 
-			// TODO: scroll/drag/release of toolpath view should only be active when mouse is on toolpath view
 			pointer.InputOp{
-				Kinds:        pointer.Press | pointer.Scroll | pointer.Drag | pointer.Release,
-				Tag:          a,
-				ScrollBounds: image.Rectangle{Min: image.Point{X: -50, Y: -50}, Max: image.Point{X: 50, Y: 50}},
+				Kinds: pointer.Press | pointer.Scroll,
+				Tag:   a,
 			}.Add(gtx.Ops)
 
 			// draw the application
@@ -235,32 +220,63 @@ func (a *App) Layout(gtx C) D {
 						return a.LayoutDRO(gtx)
 					})
 				}),
-				layout.Flexed(1, func(gtx C) D {
-					borderColour := rgb(128, 128, 128)
-					return Panel{Margin: 5, Width: 1, CornerRadius: 5, Color: borderColour}.Layout(gtx, func(gtx C) D {
-						// TODO: render in a different thread
-						// TODO: panning, zooming
-						// TODO: "jog to here"
-						// TODO: show coordinates of hovered point
-						if a.g.Vel.Length() > 0.001 {
-							// invalidate the frame if the velocity is non-zero,
-							// because we need to redraw the plotted path
-							// XXX: we should instead invalidate only when the rendering thread has a new plot to show
-							a.w.Invalidate()
-						}
-						img := a.path.Render(gtx.Constraints.Min.X, gtx.Constraints.Min.Y)
-						im := widget.Image{
-							Src:   paint.NewImageOp(img),
-							Scale: 1.0 / gtx.Metric.PxPerDp,
-						}
-						return im.Layout(gtx)
-					})
-				}),
+				layout.Flexed(1, a.LayoutToolpath),
 			)
 		}),
 		layout.Rigid(a.mdi.Layout),
 		layout.Rigid(a.LayoutStatusBar),
 	)
+}
+
+func (a *App) LayoutToolpath(gtx C) D {
+	for _, gtxEvent := range gtx.Events(a.path) {
+		switch gtxE := gtxEvent.(type) {
+		case pointer.Event:
+			if gtxE.Kind == pointer.Scroll {
+				a.path.pxPerMm *= 1.0 - float64(gtxE.Scroll.Y)/100.0
+			} else if gtxE.Kind == pointer.Drag {
+				if !a.dragging {
+					a.dragging = true
+					a.dragStart = gtxE.Position
+					a.dragStartCentre = a.path.centre
+				}
+				origCentre := f32.Point{X: float32(a.dragStartCentre.X), Y: float32(a.dragStartCentre.Y)}
+				newCentre := origCentre.Add((a.dragStart.Sub(gtxE.Position)).Div(float32(a.path.pxPerMm)))
+				a.path.centre = V4d{X: float64(newCentre.X), Y: float64(newCentre.Y)}
+			} else if gtxE.Kind == pointer.Release {
+				a.dragging = false
+			}
+
+		}
+	}
+
+	borderColour := rgb(128, 128, 128)
+	dims := Panel{Margin: 5, Width: 1, CornerRadius: 5, Color: borderColour}.Layout(gtx, func(gtx C) D {
+		// TODO: render in a different thread
+		// TODO: "jog to here"
+		// TODO: show coordinates of hovered point
+		if a.g.Vel.Length() > 0.001 {
+			// invalidate the frame if the velocity is non-zero,
+			// because we need to redraw the plotted path
+			// XXX: we should instead invalidate only when the rendering thread has a new plot to show
+			a.w.Invalidate()
+		}
+		img := a.path.Render(gtx.Constraints.Min.X, gtx.Constraints.Min.Y)
+		im := widget.Image{
+			Src:   paint.NewImageOp(img),
+			Scale: 1.0 / gtx.Metric.PxPerDp,
+		}
+		return im.Layout(gtx)
+	})
+
+	defer clip.Rect(image.Rectangle{Max: dims.Size}).Push(gtx.Ops).Pop()
+	pointer.InputOp{
+		Kinds:        pointer.Scroll | pointer.Drag | pointer.Release,
+		Tag:          a.path,
+		ScrollBounds: image.Rectangle{Min: image.Point{X: -50, Y: -50}, Max: image.Point{X: 50, Y: 50}},
+	}.Add(gtx.Ops)
+
+	return dims
 }
 
 func (a *App) MDIInput(line string) {

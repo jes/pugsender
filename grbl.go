@@ -116,16 +116,11 @@ func (g *Grbl) Monitor() {
 
 	// ask for a status update every 200ms, until Closed
 	ticker := time.NewTicker(200 * time.Millisecond)
+	g.RequestStatusUpdate()
 	go func() {
 		for {
 			<-ticker.C
-			if g.Closed {
-				break
-			}
-			_, err := g.Write([]byte{'?'})
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "error asking for status update, closing: %v", err)
-				g.Close()
+			if !g.RequestStatusUpdate() {
 				break
 			}
 		}
@@ -134,22 +129,13 @@ func (g *Grbl) Monitor() {
 
 	// ask for active g-codes every second, until closed
 	ticker2 := time.NewTicker(time.Second)
+	g.RequestGCodes()
 	go func() {
 		for {
 			<-ticker2.C
-			if g.Closed {
+			if !g.RequestGCodes() {
 				break
 			}
-			// TODO: also request gcodes whenever we think they might have changed?
-			c := g.Command("$G")
-			if c == nil {
-				if g.Closed {
-					break
-				} else {
-					continue
-				}
-			}
-			go func() { <-c }() // XXX: ignore response
 		}
 		ticker2.Stop()
 	}()
@@ -172,6 +158,38 @@ func (g *Grbl) Monitor() {
 	g.Close()
 }
 
+// request a status update, return true if ok or false if not
+func (g *Grbl) RequestStatusUpdate() bool {
+	if g.Closed {
+		return false
+	}
+	_, err := g.Write([]byte{'?'})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error asking for status update, closing: %v", err)
+		g.Close()
+		return false
+	}
+	return true
+}
+
+// request active gcodes, return true if ok or false if not
+func (g *Grbl) RequestGCodes() bool {
+	if g.Closed {
+		return false
+	}
+	// TODO: also request gcodes whenever we think they might have changed?
+	c := g.Command("$G")
+	if c == nil {
+		if g.Closed {
+			return false
+		} else {
+			return true
+		}
+	}
+	go func() { <-c }() // XXX: ignore response
+	return true
+}
+
 // "status" should be a status report line from Grbl
 // send a struct{} to the StatusUpdate channel whenever there isa new status report
 func (g *Grbl) ParseStatus(status string) {
@@ -181,6 +199,11 @@ func (g *Grbl) ParseStatus(status string) {
 	status = strings.Trim(status, "<>")
 	parts := strings.Split(status, "|")
 	g.Status = parts[0]
+
+	if g.GCodes == "" {
+		// at startup, get the active g-codes without having to wait for the timer to fire
+		g.RequestGCodes()
+	}
 
 	// grbl in theory should give us either a wpos or an mpos
 	// every time, but track them separately just in case
@@ -269,4 +292,16 @@ func (g *Grbl) SendResponse(line string) {
 	g.ResponseQueue = g.ResponseQueue[1:]
 	responseChan <- line
 	close(responseChan)
+}
+
+// extrapolated Wpos
+func (g *Grbl) WposExt() V4d {
+	dt := time.Now().Sub(g.UpdateTime)
+	return g.Wpos.Add(g.Vel.Mul(dt.Minutes()))
+}
+
+// extrapolated Mpos
+func (g *Grbl) MposExt() V4d {
+	dt := time.Now().Sub(g.UpdateTime)
+	return g.Mpos.Add(g.Vel.Mul(dt.Minutes()))
 }

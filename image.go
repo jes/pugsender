@@ -12,7 +12,7 @@ import (
 func drawImage(gtx layout.Context, img image.Image) D {
 	im := widget.Image{
 		Src:   paint.NewImageOp(img),
-		Scale: 0.09,
+		Scale: 0.07,
 	}
 	return im.Layout(gtx)
 }

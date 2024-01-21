@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"strconv"
 	"strings"
 )
@@ -49,4 +50,8 @@ func (a V4d) Mul(k float64) V4d {
 
 func (a V4d) Div(k float64) V4d {
 	return a.Mul(1 / k)
+}
+
+func (a V4d) Length() float64 {
+	return math.Sqrt(a.X*a.X + a.Y*a.Y + a.Z*a.Z + a.A*a.A)
 }

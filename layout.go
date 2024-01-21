@@ -1,12 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"gioui.org/text"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
@@ -21,6 +23,17 @@ type Panel struct {
 	Padding         unit.Dp // inside the border
 }
 
+type Label struct {
+	th   *material.Theme
+	text string
+}
+
+type Readout struct {
+	th            *material.Theme
+	TextSize      unit.Sp
+	decimalPlaces int
+}
+
 // draw widget with the given background colour
 func LayoutColour(gtx C, col color.NRGBA, widget layout.Widget) D {
 	return layout.Background{}.Layout(gtx, func(gtx C) D {
@@ -32,7 +45,7 @@ func LayoutColour(gtx C, col color.NRGBA, widget layout.Widget) D {
 // based on material.ProgressBar
 func LayoutProgressBar(gtx C, progress float64, th *material.Theme, text string) D {
 	shader := func(width int, color color.NRGBA) layout.Dimensions {
-		d := image.Point{X: width, Y: gtx.Dp(18)}
+		d := image.Point{X: width, Y: gtx.Dp(15)}
 
 		defer clip.Rect(image.Rectangle{Max: image.Pt(width, d.Y)}).Push(gtx.Ops).Pop()
 		paint.ColorOp{Color: color}.Add(gtx.Ops)
@@ -58,7 +71,7 @@ func LayoutProgressBar(gtx C, progress float64, th *material.Theme, text string)
 				}),
 			)
 		}),
-		layout.Expanded(material.H6(th, text).Layout),
+		layout.Expanded(material.Body1(th, text).Layout),
 	)
 }
 
@@ -78,6 +91,30 @@ func (p Panel) Layout(gtx C, w layout.Widget) D {
 			})
 		})
 	}
+}
+
+func (l Label) Layout(gtx C) D {
+	label := material.H5(l.th, l.text)
+	borderColour := grey(128)
+
+	return Panel{Width: 1, CornerRadius: 2, Color: borderColour, Margin: 4, Padding: 4}.Layout(gtx, label.Layout)
+
+}
+
+func (r Readout) Layout(gtx C, name string, value float64) D {
+	nameLabel := material.Label(r.th, r.TextSize, name)
+	valueLabel := material.Label(r.th, r.TextSize, fmt.Sprintf("%.*f ", r.decimalPlaces, value))
+	valueLabel.Alignment = text.End
+
+	return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+		layout.Rigid(layout.Spacer{Width: 5}.Layout),
+		layout.Rigid(nameLabel.Layout),
+		layout.Rigid(layout.Spacer{Width: 10}.Layout),
+		layout.Flexed(1, func(gtx C) D {
+			return Panel{Width: 1, Color: grey(128), CornerRadius: 5, BackgroundColor: grey(32), Margin: 2}.Layout(gtx, valueLabel.Layout)
+		}),
+	)
+
 }
 
 func rgb(r uint8, g uint8, b uint8) color.NRGBA {

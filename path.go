@@ -17,6 +17,9 @@ func NewPath() *Path {
 }
 
 func (p *Path) Update(pos V4d) {
+	// TODO: if this point lies on a straight line through
+	// the last 2 points, simplify the path by replacing the
+	// last point instead of appending
 	p.positions = append(p.positions, pos)
 }
 

@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math"
-	"time"
 
 	"gioui.org/layout"
 	"gioui.org/text"
@@ -15,11 +13,12 @@ func (a *App) LayoutDRO(gtx C) D {
 	return layout.UniformInset(5).Layout(gtx, func(gtx C) D {
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 			layout.Rigid(a.LayoutGrblStatus),
+			layout.Rigid(layout.Spacer{Height: 5}.Layout),
 			layout.Rigid(a.LayoutDROCoords),
+			layout.Rigid(layout.Spacer{Height: 5}.Layout),
 			layout.Rigid(a.LayoutFeedSpeed),
-			layout.Rigid(func(gtx C) D {
-				return drawGCodes(a.th, gtx, a.g)
-			}),
+			layout.Rigid(layout.Spacer{Height: 5}.Layout),
+			layout.Rigid(a.LayoutGCodes),
 			layout.Rigid(func(gtx C) D {
 				return drawGrblModes(a.th, gtx, a.g)
 			}),
@@ -41,48 +40,48 @@ func (a *App) LayoutGrblStatus(gtx C) D {
 }
 
 func (a *App) LayoutDROCoords(gtx C) D {
-	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-		layout.Rigid(func(gtx C) D {
-			return a.LayoutDROCoord(gtx, "X", a.g.Wpos.X, a.g.Vel.X, a.g.UpdateTime)
-		}),
-		layout.Rigid(func(gtx C) D {
-			return a.LayoutDROCoord(gtx, "Y", a.g.Wpos.Y, a.g.Vel.Y, a.g.UpdateTime)
-		}),
-		layout.Rigid(func(gtx C) D {
-			return a.LayoutDROCoord(gtx, "Z", a.g.Wpos.Z, a.g.Vel.Z, a.g.UpdateTime)
-		}),
-	)
-}
-
-func (a *App) LayoutDROCoord(gtx C, name string, value float64, vel float64, lastUpdate time.Time) D {
-	dt := time.Now().Sub(lastUpdate)
-	value = value + vel*dt.Minutes()
-	if math.Abs(vel) > 0.001 {
+	if a.g.Vel.Length() > 0.001 {
+		// invalidate the frame if the velocity is non-zero,
+		// because we need to redraw the extrapolated coordinates
 		a.w.Invalidate()
 	}
-	label := material.H4(a.th, fmt.Sprintf("%s: %.03f", name, value))
-	return label.Layout(gtx)
+
+	readout := Readout{th: a.th, decimalPlaces: 3, TextSize: material.H4(a.th, "").TextSize}
+
+	return Panel{Width: 1, Color: grey(128), CornerRadius: 5, Padding: 5, BackgroundColor: grey(0)}.Layout(gtx, func(gtx C) D {
+		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+			layout.Rigid(func(gtx C) D {
+				return readout.Layout(gtx, "X", a.g.WposExt().X)
+			}),
+			layout.Rigid(func(gtx C) D {
+				return readout.Layout(gtx, "Y", a.g.WposExt().Y)
+			}),
+			layout.Rigid(func(gtx C) D {
+				return readout.Layout(gtx, "Z", a.g.WposExt().Z)
+			}),
+		)
+	})
 }
 
 func (a *App) LayoutFeedSpeed(gtx C) D {
+	readout := Readout{th: a.th, TextSize: material.H5(a.th, "").TextSize}
+
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx C) D {
-			label := material.H4(a.th, fmt.Sprintf("Feed: %.0f", a.g.FeedRate))
-			return label.Layout(gtx)
+			return readout.Layout(gtx, " Feed", a.g.FeedRate)
 		}),
 		layout.Rigid(func(gtx C) D {
-			label := material.H4(a.th, fmt.Sprintf("Speed: %.0f", a.g.SpindleSpeed))
-			return label.Layout(gtx)
+			return readout.Layout(gtx, "Speed", a.g.SpindleSpeed)
 		}),
 	)
 }
 
-func drawGCodes(th *material.Theme, gtx C, g *Grbl) D {
-	label := material.H4(th, fmt.Sprintf(g.GCodes))
+func (a *App) LayoutGCodes(gtx C) D {
+	label := material.H6(a.th, fmt.Sprintf(a.g.GCodes))
 	return label.Layout(gtx)
 }
 
 func drawGrblModes(th *material.Theme, gtx C, g *Grbl) D {
-	label := material.H4(th, fmt.Sprintf("[probe]"))
+	label := material.H5(th, fmt.Sprintf("[probe]"))
 	return label.Layout(gtx)
 }

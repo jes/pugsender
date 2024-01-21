@@ -30,7 +30,6 @@ func (a *App) LayoutBufferState(gtx C) D {
 			// planner buffer
 			return LayoutProgressBar(gtx, utilisation(float64(a.g.PlannerSize), float64(a.g.PlannerFree)), th, "PLAN")
 		}),
-		layout.Rigid(layout.Spacer{Height: 2}.Layout),
 		layout.Rigid(func(gtx C) D {
 			// serial buffer
 			return LayoutProgressBar(gtx, utilisation(float64(a.g.SerialSize), float64(a.g.SerialFree)), th, "SER")

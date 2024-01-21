@@ -180,8 +180,6 @@ func (a *App) Connect(g *Grbl) {
 			a.w.Invalidate()
 			if a.g.Closed {
 				return
-			} else {
-				a.path.Update(g.Wpos)
 			}
 		}
 	}()
@@ -195,21 +193,36 @@ func (a *App) Layout(gtx C) D {
 		a.PopMode()
 	}
 
+	a.path.Update(a.g.WposExt())
+
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Flexed(1, func(gtx C) D {
 			return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
-				layout.Flexed(0.25, func(gtx C) D {
+				layout.Rigid(func(gtx C) D {
+					// not too wide, ...
+					if gtx.Constraints.Max.X > 500 {
+						gtx.Constraints.Max.X = 500
+					}
+					// ...but use 100% of available width
+					gtx.Constraints.Min.X = gtx.Constraints.Max.X
+
 					return Panel{Width: 1, Color: grey(128), Margin: 5, Padding: 5, BackgroundColor: grey(16), CornerRadius: 5}.Layout(gtx, func(gtx C) D {
 						return a.LayoutDRO(gtx)
 					})
 				}),
-				layout.Flexed(0.75, func(gtx C) D {
+				layout.Flexed(1, func(gtx C) D {
 					borderColour := rgb(128, 128, 128)
 					return Panel{Margin: 5, Width: 1, CornerRadius: 5, Color: borderColour}.Layout(gtx, func(gtx C) D {
 						// TODO: render in a different thread
 						// TODO: panning, zooming
 						// TODO: "jog to here"
 						// TODO: show coordinates of hovered point
+						if a.g.Vel.Length() > 0.001 {
+							// invalidate the frame if the velocity is non-zero,
+							// because we need to redraw the plotted path
+							// XXX: we should instead invalidate only when the rendering thread has a new plot to show
+							a.w.Invalidate()
+						}
 						img := a.path.Render(gtx.Constraints.Min.X, gtx.Constraints.Min.Y, V4d{}, 10.0)
 						im := widget.Image{
 							Src:   paint.NewImageOp(img),
@@ -297,7 +310,7 @@ func (a *App) KeyPress(e key.Event) {
 func (a *App) Label(text string) Label {
 	return Label{
 		text: text,
-		app:  a,
+		th:   a.th,
 	}
 }
 

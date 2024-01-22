@@ -102,6 +102,8 @@ func (g *Grbl) CommandIgnore(line string) bool {
 // implements io.Writer
 func (g *Grbl) Write(p []byte) (n int, err error) {
 	// TODO: is there a race condition where concurrent writes can end up interleaved?
+	// TODO: is there a race condition where we decrease SerialFree, then read a status report that still has the old SerialFree in it,
+	// and then send some more bytes but the buffer is already full?
 	g.SerialFree -= len(p)
 	os.Stdout.Write(p)
 	return g.SerialPort.Write(p)

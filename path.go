@@ -19,6 +19,7 @@ type Path struct {
 	widthPx       int
 	heightPx      int
 	axes          V4d
+	Image         image.Image
 }
 
 func NewPath() *Path {
@@ -35,7 +36,7 @@ func (p *Path) Update(pos V4d) {
 // TODO: store the image we made, and next time we render
 // with the same parameters, only render the new points on
 // top, instead of starting from scratch every time
-func (p *Path) Render() image.Image {
+func (p *Path) Render() {
 	img := image.NewRGBA(image.Rect(0, 0, p.widthPx, p.heightPx))
 	gc := draw2dimg.NewGraphicContext(img)
 
@@ -77,7 +78,7 @@ func (p *Path) Render() image.Image {
 		p.DrawCrossHair(gc, x, y, 12)
 	}
 
-	return img
+	p.Image = img
 }
 
 func (p *Path) DrawGridLines(gc *draw2dimg.GraphicContext, step float64, col color.NRGBA) {

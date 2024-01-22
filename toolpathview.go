@@ -20,6 +20,24 @@ func (a *App) LayoutToolpath(gtx C) D {
 	a.path.axes.X = -a.g.Wco.X
 	a.path.axes.Y = -a.g.Wco.Y
 
+	borderColour := rgb(128, 128, 128)
+	return Panel{Margin: 5, Width: 1, CornerRadius: 5, Color: borderColour}.Layout(gtx, func(gtx C) D {
+		a.path.widthPx = gtx.Constraints.Min.X
+		a.path.heightPx = gtx.Constraints.Min.Y
+		if a.hovering {
+			return layout.Stack{Alignment: layout.SE}.Layout(gtx,
+				layout.Expanded(a.LayoutToolpathImage),
+				layout.Stacked(func(gtx C) D {
+					return material.H6(a.th, fmt.Sprintf("X%.03f Y%.03f", a.hoverPoint.X, a.hoverPoint.Y)).Layout(gtx)
+				}),
+			)
+		} else {
+			return a.LayoutToolpathImage(gtx)
+		}
+	})
+}
+
+func (a *App) LayoutToolpathImage(gtx C) D {
 	for _, gtxEvent := range gtx.Events(a.path) {
 		switch gtxE := gtxEvent.(type) {
 		case pointer.Event:
@@ -63,24 +81,21 @@ func (a *App) LayoutToolpath(gtx C) D {
 		}
 	}
 
-	borderColour := rgb(128, 128, 128)
-	dims := Panel{Margin: 5, Width: 1, CornerRadius: 5, Color: borderColour}.Layout(gtx, func(gtx C) D {
-		a.path.widthPx = gtx.Constraints.Min.X
-		a.path.heightPx = gtx.Constraints.Min.Y
-		if a.hovering {
-			return layout.Stack{Alignment: layout.SE}.Layout(gtx,
-				layout.Expanded(a.LayoutToolpathImage),
-				layout.Stacked(func(gtx C) D {
-					return material.H6(a.th, fmt.Sprintf("X%.03f Y%.03f", a.hoverPoint.X, a.hoverPoint.Y)).Layout(gtx)
-				}),
-			)
-		} else {
-			return a.LayoutToolpathImage(gtx)
-		}
-	})
+	if a.g.Vel.Length() > 0.001 {
+		// invalidate the frame if the velocity is non-zero,
+		// because we need to redraw the plotted path
+		// XXX: we should instead invalidate only when the rendering thread has a new plot to show
+		a.w.Invalidate()
+	}
+	// TODO: render in a different thread
+	a.path.Render()
+	im := widget.Image{
+		Src:   paint.NewImageOp(a.path.Image),
+		Scale: 1.0 / gtx.Metric.PxPerDp,
+	}
 
-	// TODO: we really need to take pointer events from the image, rather than the container,
-	// because of the thickness of the border
+	dims := im.Layout(gtx)
+
 	defer clip.Rect(image.Rectangle{Max: dims.Size}).Push(gtx.Ops).Pop()
 	pointer.InputOp{
 		Kinds:        pointer.Scroll | pointer.Drag | pointer.Release | pointer.Move | pointer.Leave,
@@ -89,21 +104,4 @@ func (a *App) LayoutToolpath(gtx C) D {
 	}.Add(gtx.Ops)
 
 	return dims
-}
-
-func (a *App) LayoutToolpathImage(gtx C) D {
-	// TODO: render in a different thread
-	if a.g.Vel.Length() > 0.001 {
-		// invalidate the frame if the velocity is non-zero,
-		// because we need to redraw the plotted path
-		// XXX: we should instead invalidate only when the rendering thread has a new plot to show
-		a.w.Invalidate()
-	}
-	img := a.path.Render()
-	im := widget.Image{
-		Src:   paint.NewImageOp(img),
-		Scale: 1.0 / gtx.Metric.PxPerDp,
-	}
-
-	return im.Layout(gtx)
 }

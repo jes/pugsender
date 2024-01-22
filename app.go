@@ -63,6 +63,8 @@ type App struct {
 	hovering        bool
 	hoverPoint      V4d
 
+	split Split
+
 	img image.Image
 	mdi *MDI
 }
@@ -87,6 +89,7 @@ func NewApp() *App {
 	a.path.showCrossHair = true
 	a.path.showAxes = true
 	a.path.showGridLines = true
+	a.split.Ratio = -0.5
 
 	var err error
 	a.img, err = loadImage("pugs.png")
@@ -206,21 +209,12 @@ func (a *App) Connect(g *Grbl) {
 func (a *App) Layout(gtx C) D {
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Flexed(1, func(gtx C) D {
-			return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
-				layout.Rigid(func(gtx C) D {
-					// not too wide, ...
-					if gtx.Constraints.Max.X > 500 {
-						gtx.Constraints.Max.X = 500
-					}
-					// ...but use 100% of available width
-					gtx.Constraints.Min.X = gtx.Constraints.Max.X
+			return a.split.Layout(gtx, func(gtx C) D {
+				return Panel{Width: 1, Color: grey(128), Margin: 5, Padding: 5, BackgroundColor: grey(16), CornerRadius: 5}.Layout(gtx, func(gtx C) D {
+					return a.LayoutDRO(gtx)
+				})
 
-					return Panel{Width: 1, Color: grey(128), Margin: 5, Padding: 5, BackgroundColor: grey(16), CornerRadius: 5}.Layout(gtx, func(gtx C) D {
-						return a.LayoutDRO(gtx)
-					})
-				}),
-				layout.Flexed(1, a.LayoutToolpath),
-			)
+			}, a.LayoutToolpath)
 		}),
 		layout.Rigid(a.LayoutMDI),
 		layout.Rigid(a.LayoutStatusBar),

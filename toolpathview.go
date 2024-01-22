@@ -14,83 +14,103 @@ import (
 	"gioui.org/widget/material"
 )
 
-func (a *App) LayoutToolpath(gtx C) D {
-	a.path.Update(a.g.Mpos)
-	a.path.crossHair = a.g.MposExt()
-	a.path.axes.X = -a.g.Wco.X
-	a.path.axes.Y = -a.g.Wco.Y
+type ToolpathView struct {
+	app             *App
+	path            *Path
+	dragStart       f32.Point
+	dragStartCentre V4d
+	dragging        bool
+	hovering        bool
+	hoverPoint      V4d
+}
+
+func NewToolpathView(app *App) *ToolpathView {
+	tp := &ToolpathView{}
+	tp.app = app
+	tp.path = NewPath()
+	tp.path.showCrossHair = true
+	tp.path.showAxes = true
+	tp.path.showGridLines = true
+	return tp
+}
+
+func (tp *ToolpathView) Layout(gtx C) D {
+	tp.path.Update(tp.app.g.Mpos)
+	tp.path.crossHair = tp.app.g.MposExt()
+	tp.path.axes.X = -tp.app.g.Wco.X
+	tp.path.axes.Y = -tp.app.g.Wco.Y
 
 	borderColour := rgb(128, 128, 128)
 	return Panel{Margin: 5, Width: 1, CornerRadius: 5, Color: borderColour}.Layout(gtx, func(gtx C) D {
-		a.path.widthPx = gtx.Constraints.Min.X
-		a.path.heightPx = gtx.Constraints.Min.Y
-		if a.hovering {
+		tp.path.widthPx = gtx.Constraints.Min.X
+		tp.path.heightPx = gtx.Constraints.Min.Y
+		if tp.hovering {
 			return layout.Stack{Alignment: layout.SE}.Layout(gtx,
-				layout.Expanded(a.LayoutToolpathImage),
+				layout.Expanded(tp.LayoutImage),
 				layout.Stacked(func(gtx C) D {
-					return material.H6(a.th, fmt.Sprintf("X%.03f Y%.03f", a.hoverPoint.X, a.hoverPoint.Y)).Layout(gtx)
+					return material.H6(tp.app.th, fmt.Sprintf("X%.03f Y%.03f", tp.hoverPoint.X, tp.hoverPoint.Y)).Layout(gtx)
 				}),
 			)
 		} else {
-			return a.LayoutToolpathImage(gtx)
+			return tp.LayoutImage(gtx)
 		}
 	})
 }
 
-func (a *App) LayoutToolpathImage(gtx C) D {
-	for _, gtxEvent := range gtx.Events(a.path) {
+func (tp *ToolpathView) LayoutImage(gtx C) D {
+	for _, gtxEvent := range gtx.Events(tp.path) {
 		switch gtxE := gtxEvent.(type) {
 		case pointer.Event:
 			// get click point in work coordinates
-			xMm, yMm := a.path.PxToMm(float64(gtxE.Position.X), float64(gtxE.Position.Y))
-			xMm += a.g.Wco.X
-			yMm += a.g.Wco.Y
+			xMm, yMm := tp.path.PxToMm(float64(gtxE.Position.X), float64(gtxE.Position.Y))
+			xMm += tp.app.g.Wco.X
+			yMm += tp.app.g.Wco.Y
 
 			if gtxE.Kind == pointer.Scroll {
-				a.path.pxPerMm *= 1.0 - float64(gtxE.Scroll.Y)/100.0
+				tp.path.pxPerMm *= 1.0 - float64(gtxE.Scroll.Y)/100.0
 			} else if gtxE.Kind == pointer.Drag {
-				if !a.dragging {
-					a.dragging = true
-					a.dragStart = gtxE.Position
-					a.dragStartCentre = a.path.centre
+				if !tp.dragging {
+					tp.dragging = true
+					tp.dragStart = gtxE.Position
+					tp.dragStartCentre = tp.path.centre
 				}
-				origCentre := f32.Point{X: float32(a.dragStartCentre.X), Y: float32(a.dragStartCentre.Y)}
-				newCentre := origCentre.Add((a.dragStart.Sub(gtxE.Position)).Div(float32(a.path.pxPerMm)))
-				a.path.centre = V4d{X: float64(newCentre.X), Y: float64(newCentre.Y)}
+				origCentre := f32.Point{X: float32(tp.dragStartCentre.X), Y: float32(tp.dragStartCentre.Y)}
+				newCentre := origCentre.Add((tp.dragStart.Sub(gtxE.Position)).Div(float32(tp.path.pxPerMm)))
+				tp.path.centre = V4d{X: float64(newCentre.X), Y: float64(newCentre.Y)}
 			} else if gtxE.Kind == pointer.Release {
-				if !a.dragging {
+				if !tp.dragging {
 					if gtxE.Modifiers.Contain(key.ModCtrl) {
 						// ctrl-click = jog
-						a.jog.JogTo(xMm, yMm)
+						tp.app.jog.JogTo(xMm, yMm)
 					} else if gtxE.Modifiers.Contain(key.ModShift) {
 						// shift-click = set work offset
-						pos := a.g.Wpos
+						pos := tp.app.g.Wpos
 						pos.X = xMm
 						pos.Y = yMm
-						a.g.SetWpos(pos)
+						tp.app.g.SetWpos(pos)
 					}
 				}
 				// TODO: right-click for context menu?
-				a.dragging = false
+				tp.dragging = false
 			} else if gtxE.Kind == pointer.Move {
-				a.hovering = true
+				tp.hovering = true
 			} else if gtxE.Kind == pointer.Leave {
-				a.hovering = false
+				tp.hovering = false
 			}
-			a.hoverPoint = V4d{X: xMm, Y: yMm}
+			tp.hoverPoint = V4d{X: xMm, Y: yMm}
 		}
 	}
 
-	if a.g.Vel.Length() > 0.001 {
+	if tp.app.g.Vel.Length() > 0.001 {
 		// invalidate the frame if the velocity is non-zero,
 		// because we need to redraw the plotted path
 		// XXX: we should instead invalidate only when the rendering thread has a new plot to show
-		a.w.Invalidate()
+		tp.app.w.Invalidate()
 	}
 	// TODO: render in a different thread
-	a.path.Render()
+	tp.path.Render()
 	im := widget.Image{
-		Src:   paint.NewImageOp(a.path.Image),
+		Src:   paint.NewImageOp(tp.path.Image),
 		Scale: 1.0 / gtx.Metric.PxPerDp,
 	}
 
@@ -99,7 +119,7 @@ func (a *App) LayoutToolpathImage(gtx C) D {
 	defer clip.Rect(image.Rectangle{Max: dims.Size}).Push(gtx.Ops).Pop()
 	pointer.InputOp{
 		Kinds:        pointer.Scroll | pointer.Drag | pointer.Release | pointer.Move | pointer.Leave,
-		Tag:          a.path,
+		Tag:          tp.path,
 		ScrollBounds: image.Rectangle{Min: image.Point{X: -50, Y: -50}, Max: image.Point{X: 50, Y: 50}},
 	}.Add(gtx.Ops)
 

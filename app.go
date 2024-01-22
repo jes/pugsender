@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"gioui.org/app"
-	"gioui.org/f32"
 	"gioui.org/font"
 	"gioui.org/font/gofont"
 	"gioui.org/io/key"
@@ -54,13 +53,7 @@ type App struct {
 	autoConnect bool
 	jog         JogControl
 
-	// TODO: move this toolpath stuff into a separate object
-	path            *Path
-	dragStart       f32.Point
-	dragStartCentre V4d
-	dragging        bool
-	hovering        bool
-	hoverPoint      V4d
+	tp *ToolpathView
 
 	split Split
 
@@ -84,10 +77,7 @@ func NewApp() *App {
 	}
 	a.mdi = NewMDI(a)
 	a.jog = NewJogControl(a)
-	a.path = NewPath()
-	a.path.showCrossHair = true
-	a.path.showAxes = true
-	a.path.showGridLines = true
+	a.tp = NewToolpathView(a)
 	a.split.Ratio = -0.5
 	a.split.InvisibleBar = true
 
@@ -214,7 +204,7 @@ func (a *App) Layout(gtx C) D {
 					return a.LayoutDRO(gtx)
 				})
 
-			}, a.LayoutToolpath)
+			}, a.tp.Layout)
 		}),
 		layout.Rigid(a.LayoutMDI),
 		layout.Rigid(a.LayoutStatusBar),

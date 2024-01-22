@@ -133,6 +133,10 @@ func (a *App) Run() {
 				case pointer.Event:
 					if gtxE.Kind == pointer.Press {
 						a.mdi.Defocus()
+					} else if gtxE.Kind == pointer.Scroll {
+						if gtxE.Modifiers.Contain(key.ModCtrl) {
+							a.th.TextSize *= unit.Sp(1.0 - float64(gtxE.Scroll.Y)/100.0)
+						}
 					}
 				}
 			}
@@ -164,8 +168,9 @@ func (a *App) Run() {
 			}.Add(gtx.Ops)
 
 			pointer.InputOp{
-				Kinds: pointer.Press | pointer.Scroll,
-				Tag:   a,
+				Kinds:        pointer.Press | pointer.Scroll,
+				Tag:          a,
+				ScrollBounds: image.Rectangle{Min: image.Point{X: -50, Y: -50}, Max: image.Point{X: 50, Y: 50}},
 			}.Add(gtx.Ops)
 
 			// draw the application

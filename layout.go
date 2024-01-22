@@ -54,7 +54,7 @@ func LayoutColourRR(gtx C, col color.NRGBA, rr int, widget layout.Widget) D {
 // based on material.ProgressBar
 func LayoutProgressBar(gtx C, progress float64, th *material.Theme, text string) D {
 	shader := func(width int, color color.NRGBA) layout.Dimensions {
-		d := image.Point{X: width, Y: gtx.Dp(15)}
+		d := image.Point{X: width, Y: gtx.Dp(unit.Dp(th.TextSize - 1))}
 
 		defer clip.Rect(image.Rectangle{Max: image.Pt(width, d.Y)}).Push(gtx.Ops).Pop()
 		paint.ColorOp{Color: color}.Add(gtx.Ops)
@@ -66,7 +66,7 @@ func LayoutProgressBar(gtx C, progress float64, th *material.Theme, text string)
 	colour1 := grey(128)
 	colour2 := grey(255)
 
-	progressBarWidth := 100
+	progressBarWidth := int(100 * th.TextSize / 16.0)
 	return layout.Stack{Alignment: layout.Center}.Layout(gtx,
 		layout.Stacked(func(gtx C) D {
 			return layout.Stack{Alignment: layout.W}.Layout(gtx,

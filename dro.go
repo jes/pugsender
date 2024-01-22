@@ -83,6 +83,10 @@ func (a *App) LayoutGCodes(gtx C) D {
 }
 
 func drawGrblModes(th *material.Theme, gtx C, g *Grbl) D {
-	label := material.H5(th, fmt.Sprintf("[probe]"))
+	probeStr := ""
+	if g.Probe {
+		probeStr = "[probe]"
+	}
+	label := material.H5(th, probeStr)
 	return label.Layout(gtx)
 }

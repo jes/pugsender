@@ -218,6 +218,8 @@ func (g *Grbl) ParseStatus(status string) {
 	givenWpos := false
 	givenMpos := false
 
+	newProbeState := false
+
 	for _, part := range parts[1:] {
 		keyval := strings.SplitN(part, ":", 2)
 		if len(keyval) != 2 {
@@ -261,12 +263,13 @@ func (g *Grbl) ParseStatus(status string) {
 		} else if keylc == "f" { // feed rate
 			g.FeedRate = valv4d.X
 		} else if keylc == "pn" { // pins
-			g.Probe = strings.Contains(val, "P")
-			// XXX: when the probe is deactivated, grbl doesn't tell us, see https://github.com/gnea/grbl/issues/1242
+			newProbeState = strings.Contains(val, "P")
 		} else {
 			fmt.Fprintf(os.Stderr, "unrecognised field: %s\n", key)
 		}
 	}
+
+	g.Probe = newProbeState
 
 	if givenMpos {
 		g.Wpos = g.Mpos.Add(g.Wco)

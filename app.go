@@ -160,7 +160,7 @@ func (a *App) Run() {
 			).Push(gtx.Ops)
 
 			keys := []string{
-				"(Shift)-S", "(Shift)-R", "(Shift)-H", "(Shift)-G", "(Shift)-M", "(Shift)-J", key.NameEscape, key.NameLeftArrow, key.NameRightArrow, key.NameUpArrow, key.NameDownArrow, key.NamePageUp, key.NamePageDown,
+				"(Ctrl)-+", "(Ctrl)--", "(Shift)-S", "(Shift)-R", "(Shift)-H", "(Shift)-G", "(Shift)-M", "(Shift)-J", key.NameEscape, key.NameLeftArrow, key.NameRightArrow, key.NameUpArrow, key.NameDownArrow, key.NamePageUp, key.NamePageDown,
 			}
 			key.InputOp{
 				Keys: key.Set(strings.Join(keys, "|")),
@@ -397,6 +397,13 @@ func (a *App) KeyPress(e key.Event) {
 			a.mdi.Defocus()
 		}
 		a.PopMode()
+	} else if e.Name == "+" && e.Modifiers.Contain(key.ModCtrl) {
+		a.th.TextSize *= 1.1
+	} else if e.Name == "-" && e.Modifiers.Contain(key.ModCtrl) {
+		a.th.TextSize /= 1.1
+	} else if e.Name == "0" && e.Modifiers.Contain(key.ModCtrl) {
+		// XXX: is this always right?
+		a.th.TextSize = 16.0
 	}
 }
 

@@ -22,6 +22,7 @@ type ToolpathView struct {
 	dragging        bool
 	hovering        bool
 	hoverPoint      V4d
+	rendering       bool
 }
 
 func NewToolpathView(app *App) *ToolpathView {
@@ -39,6 +40,17 @@ func (tp *ToolpathView) Layout(gtx C) D {
 	tp.path.crossHair = tp.app.g.MposExt()
 	tp.path.axes.X = -tp.app.g.Wco.X
 	tp.path.axes.Y = -tp.app.g.Wco.Y
+
+	// render the toolpath in a different goroutine so as not to
+	// block the main UI
+	if !tp.rendering {
+		tp.rendering = true
+		go func() {
+			tp.path.Render()
+			tp.rendering = false
+			tp.app.w.Invalidate()
+		}()
+	}
 
 	borderColour := rgb(128, 128, 128)
 	return Panel{Margin: 5, Width: 1, CornerRadius: 5, Color: borderColour}.Layout(gtx, func(gtx C) D {
@@ -107,8 +119,6 @@ func (tp *ToolpathView) LayoutImage(gtx C) D {
 		// XXX: we should instead invalidate only when the rendering thread has a new plot to show
 		tp.app.w.Invalidate()
 	}
-	// TODO: render in a different thread
-	tp.path.Render()
 	im := widget.Image{
 		Src:   paint.NewImageOp(tp.path.Image),
 		Scale: 1.0 / gtx.Metric.PxPerDp,

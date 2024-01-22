@@ -19,6 +19,8 @@ type Split struct {
 	// Bar is the width for resizing the layout
 	Bar unit.Dp
 
+	InvisibleBar bool
+
 	drag   bool
 	dragID pointer.ID
 	dragX  float32
@@ -82,6 +84,12 @@ func (s *Split) Layout(gtx layout.Context, left, right layout.Widget) layout.Dim
 			Grab:  s.drag,
 		}.Add(gtx.Ops)
 		area.Pop()
+	}
+
+	if s.InvisibleBar {
+		leftsize += bar / 2
+		rightsize += bar / 2
+		rightoffset -= bar / 2
 	}
 
 	{

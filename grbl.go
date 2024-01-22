@@ -33,6 +33,7 @@ type Grbl struct {
 	SpindleOverride float64
 	FeedRate        float64
 	SpindleSpeed    float64
+	Pn              string
 	Probe           bool
 	StatusUpdate    chan struct{}
 	UpdateTime      time.Time
@@ -219,6 +220,7 @@ func (g *Grbl) ParseStatus(status string) {
 	givenMpos := false
 
 	newProbeState := false
+	newPn := ""
 
 	for _, part := range parts[1:] {
 		keyval := strings.SplitN(part, ":", 2)
@@ -264,12 +266,14 @@ func (g *Grbl) ParseStatus(status string) {
 			g.FeedRate = valv4d.X
 		} else if keylc == "pn" { // pins
 			newProbeState = strings.Contains(val, "P")
+			newPn = val
 		} else {
 			fmt.Fprintf(os.Stderr, "unrecognised field: %s\n", key)
 		}
 	}
 
 	g.Probe = newProbeState
+	g.Pn = newPn
 
 	if givenMpos {
 		g.Wpos = g.Mpos.Add(g.Wco)

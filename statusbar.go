@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"gioui.org/layout"
 	"gioui.org/widget/material"
 )
@@ -19,6 +21,8 @@ func (a *App) LayoutStatusBar(gtx C) D {
 			layout.Rigid(a.Label(a.g.PortName).Layout),
 			layout.Rigid(layout.Spacer{Width: 4}.Layout),
 			layout.Rigid(a.LayoutBufferState),
+			layout.Rigid(layout.Spacer{Width: 4}.Layout),
+			layout.Rigid(a.Label(fmt.Sprintf("Pn:%s", a.g.Pn)).Layout),
 		)
 	})
 }

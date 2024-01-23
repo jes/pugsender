@@ -105,10 +105,9 @@ func (tp *ToolpathView) LayoutImage(gtx C) D {
 						tp.app.jog.JogTo(xMm, yMm)
 					} else if gtxE.Modifiers.Contain(key.ModShift) {
 						// shift-click = set work offset
-						pos := tp.app.g.Wpos
-						pos.X = xMm
-						pos.Y = yMm
-						tp.app.g.SetWpos(pos)
+						tp.app.g.SetWpos("X", xMm)
+						tp.app.g.SetWpos("Y", yMm)
+						// XXX: TODO: the Y axis set doesn't work (if I swap them then the X set doesn't work, i.e. if you do two in quick succession then only the first one applies)
 					}
 				}
 				// TODO: right-click for context menu?

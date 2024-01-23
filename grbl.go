@@ -366,6 +366,6 @@ func (g *Grbl) MposExt() V4d {
 	return g.Mpos.Add(g.Vel.Mul(dt.Minutes()))
 }
 
-func (g *Grbl) SetWpos(v V4d) bool {
-	return g.CommandIgnore(fmt.Sprintf("G10L20P1X%.03fY%.03f", v.X, v.Y))
+func (g *Grbl) SetWpos(axis string, val float64) bool {
+	return g.CommandIgnore(fmt.Sprintf("G10L20P1%s%.3f", axis, val))
 }

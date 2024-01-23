@@ -48,28 +48,38 @@ func (a *App) LayoutDROCoords(gtx C) D {
 		a.w.Invalidate()
 	}
 
-	readout := Readout{th: a.th, decimalPlaces: 3, TextSize: material.H4(a.th, "").TextSize, BackgroundColor: grey(0)}
-
 	return Panel{Width: 1, Color: grey(128), CornerRadius: 5, Padding: 5, BackgroundColor: grey(32)}.Layout(gtx, func(gtx C) D {
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 			layout.Rigid(func(gtx C) D {
-				dims := readout.Layout(gtx, "X", a.g.WposExt().X)
-
-				if a.mode == ModeNum && a.numpop != nil {
-					gtx.Constraints.Max.X = dims.Size.X - 50
-					a.numpop.Layout(gtx, image.Pt(50, dims.Size.Y))
-				}
-
-				return dims
+				return a.LayoutDROCoord(gtx, "X", a.g.WposExt().X)
 			}),
 			layout.Rigid(func(gtx C) D {
-				return readout.Layout(gtx, "Y", a.g.WposExt().Y)
+				return a.LayoutDROCoord(gtx, "Y", a.g.WposExt().Y)
 			}),
 			layout.Rigid(func(gtx C) D {
-				return readout.Layout(gtx, "Z", a.g.WposExt().Z)
+				return a.LayoutDROCoord(gtx, "Z", a.g.WposExt().Z)
 			}),
+			// TODO: optional 4th axis?
 		)
 	})
+}
+
+func (a *App) ShowDROEditor(axis string, initVal float64) {
+	a.ShowNumPop(axis, initVal, func(val float64) {
+		a.g.SetWpos(axis, val)
+	})
+}
+
+func (a *App) LayoutDROCoord(gtx C, name string, val float64) D {
+	readout := Readout{th: a.th, decimalPlaces: 3, TextSize: material.H4(a.th, "").TextSize, BackgroundColor: grey(0)}
+	dims := readout.Layout(gtx, name, val)
+
+	if a.mode == ModeNum && a.numpop != nil && a.numpopType == name {
+		gtx.Constraints.Max.X = dims.Size.X - 50
+		a.numpop.Layout(gtx, image.Pt(50, dims.Size.Y))
+	}
+
+	return dims
 }
 
 func (a *App) LayoutFeedSpeed(gtx C) D {

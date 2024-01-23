@@ -58,7 +58,8 @@ type App struct {
 
 	tp *ToolpathView
 
-	numpop *NumPop
+	numpop     *NumPop
+	numpopType string
 
 	split Split
 
@@ -158,7 +159,7 @@ func (a *App) Run() {
 			).Push(gtx.Ops)
 
 			keys := []string{
-				"(Ctrl)-+", "(Ctrl)--", "(Shift)-S", "(Shift)-R", "(Shift)-H", "(Shift)-X", "(Shift)-G", "(Shift)-M", "(Shift)-J", key.NameEscape, key.NameLeftArrow, key.NameRightArrow, key.NameUpArrow, key.NameDownArrow, key.NamePageUp, key.NamePageDown,
+				"(Ctrl)-+", "(Ctrl)--", "(Shift)-S", "(Shift)-R", "(Shift)-H", "(Shift)-X", "(Shift)-Y", "(Shift)-Z", "(Shift)-A", "(Shift)-G", "(Shift)-M", "(Shift)-J", key.NameEscape, key.NameLeftArrow, key.NameRightArrow, key.NameUpArrow, key.NameDownArrow, key.NamePageUp, key.NamePageDown,
 			}
 			key.InputOp{
 				Keys: key.Set(strings.Join(keys, "|")),
@@ -294,14 +295,14 @@ func (a *App) KeyPress(e key.Event) {
 			// cycle-start
 			a.g.CommandRealtime('~')
 		} else if e.Name == "X" {
-			a.numpop = NewNumPop(a, a.g.Wpos.X, func(apply bool, val float64) {
-				fmt.Printf("apply=%v, val=%f\n", apply, val)
-				p := a.g.Wpos
-				p.X = val
-				a.g.SetWpos(p)
-				a.PopMode()
-			})
-			a.PushMode(ModeNum)
+			a.ShowDROEditor("X", a.g.Wpos.X)
+		} else if e.Name == "Y" {
+			a.ShowDROEditor("Y", a.g.Wpos.Y)
+		} else if e.Name == "Z" {
+			a.ShowDROEditor("Z", a.g.Wpos.Z)
+		} else if e.Name == "A" {
+			// TODO: only if there is a 4th axis
+			a.ShowDROEditor("A", a.g.Wpos.A)
 		}
 	}
 
@@ -318,6 +319,17 @@ func (a *App) KeyPress(e key.Event) {
 		// XXX: is this always right?
 		a.th.TextSize = 16.0
 	}
+}
+
+func (a *App) ShowNumPop(numpopType string, initVal float64, cb func(float64)) {
+	a.numpop = NewNumPop(a, initVal, func(apply bool, val float64) {
+		if apply {
+			cb(val)
+		}
+		a.PopMode()
+	})
+	a.numpopType = numpopType
+	a.PushMode(ModeNum)
 }
 
 func (a *App) Label(text string) Label {

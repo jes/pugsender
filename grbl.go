@@ -389,6 +389,10 @@ func (g *Grbl) SetWpos(axis string, val float64) bool {
 	// we need to wait until a G10 is acknowledged before proceeding
 	// TODO: maybe g.Command should detect if the command implies EEPROM
 	// access and if so block until it is completed automatically?
+	if g.Status != "Idle" {
+		// only allow setting WCO in Idle state
+		return false
+	}
 	ok, _ := g.CommandWait(fmt.Sprintf("G10L20P1%s%.3f", axis, val))
 	return ok
 }

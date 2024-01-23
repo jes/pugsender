@@ -107,7 +107,6 @@ func (tp *ToolpathView) LayoutImage(gtx C) D {
 						// shift-click = set work offset
 						tp.app.g.SetWpos("X", xMm)
 						tp.app.g.SetWpos("Y", yMm)
-						// XXX: TODO: the Y axis set doesn't work (if I swap them then the X set doesn't work, i.e. if you do two in quick succession then only the first one applies)
 					}
 				}
 				// TODO: right-click for context menu?

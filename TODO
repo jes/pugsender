@@ -1,4 +1,3 @@
-allow setting DRO
 save/restore coordinate system
 allow disabling autoconnect
 allow connecting to manually-typed serial port
@@ -6,7 +5,6 @@ allow opening g-code
 efficient file browser
 allow setting jog increment & feed rate
 show key shortcuts & mouse operations
-show coordinates when mouse over toolpath view
 "follow outline" of gcode file
 better ui for pause/resume etc.
 raw serial console

@@ -118,6 +118,23 @@ func (g *Grbl) CommandIgnore(line string) bool {
 	return true
 }
 
+// add the given line to the command queue, return
+// (true, "...response...") if successful or (false, "") if not
+//
+// block until the response is received
+// TODO: other threads can still send data while this thread is blocked, which can cause corrupted commands
+func (g *Grbl) CommandWait(line string) (bool, string) {
+	if !g.Ready {
+		return false, ""
+	}
+	c := g.Command(line)
+	if c == nil {
+		return false, ""
+	}
+	resp := <-c
+	return true, resp
+}
+
 // send the given realtime command, return true if successful
 // or false if not
 func (g *Grbl) CommandRealtime(cmd byte) bool {
@@ -367,5 +384,11 @@ func (g *Grbl) MposExt() V4d {
 }
 
 func (g *Grbl) SetWpos(axis string, val float64) bool {
-	return g.CommandIgnore(fmt.Sprintf("G10L20P1%s%.3f", axis, val))
+	// XXX: uses CommandWait, which can block the main UI thread
+	// because of https://github.com/gnea/grbl/wiki/Grbl-v1.1-Interface#eeprom-issues
+	// we need to wait until a G10 is acknowledged before proceeding
+	// TODO: maybe g.Command should detect if the command implies EEPROM
+	// access and if so block until it is completed automatically?
+	ok, _ := g.CommandWait(fmt.Sprintf("G10L20P1%s%.3f", axis, val))
+	return ok
 }

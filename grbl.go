@@ -68,7 +68,9 @@ func (g *Grbl) Command(line string) chan string {
 	}
 
 	// not enough space in Grbl's input buffer? reject the command
-	if g.SerialFree <= len(line)+1 {
+	// +1 for the trailing \n
+	// +1 because we need to leave at least 1 byte free else Grbl locks up
+	if g.SerialFree <= len(line)+1+1 {
 		return nil
 	}
 

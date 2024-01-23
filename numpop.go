@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"image"
+	"strconv"
 
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -11,8 +12,6 @@ import (
 	"gioui.org/text"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-
-	"github.com/Knetic/govaluate"
 )
 
 type NumPop struct {
@@ -46,8 +45,8 @@ func (n *NumPop) Layout(gtx C, location image.Point) D {
 	for _, e := range n.editor.Events() {
 		switch e.(type) {
 		case widget.SubmitEvent:
-			val, err := n.Value()
-			n.cb(err == nil, val)
+			val, ok := n.Value()
+			n.cb(ok, val)
 		default:
 			fmt.Printf("[unhandled NumPop event] %#v\n", e)
 		}
@@ -70,7 +69,7 @@ func (n *NumPop) Layout(gtx C, location image.Point) D {
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 			layout.Rigid(func(gtx C) D {
 				v := n.initVal
-				if val, err := n.Value(); err == nil {
+				if val, ok := n.Value(); ok {
 					v = val
 				}
 				label := material.H4(n.app.th, fmt.Sprintf("%.3f ", v))
@@ -99,23 +98,29 @@ func (n *NumPop) Layout(gtx C, location image.Point) D {
 	return dims
 }
 
-func (n *NumPop) Value() (float64, error) {
-	expr, err := govaluate.NewEvaluableExpression(n.editor.Text())
-	if err != nil {
-		// if the expression won't parse as-is, try prefixing the initial value,
-		// this makes inputs like "+1", "/2" work as expected
-		// XXX: is there anything this could get wrong?
-		expr, err = govaluate.NewEvaluableExpression(fmt.Sprintf("%f %s", n.initVal, n.editor.Text()))
-		if err != nil {
-			return 0.0, err
+func (n *NumPop) Value() (float64, bool) {
+	str := n.editor.Text()
+	if len(str) == 0 {
+		return 0.0, false
+	}
+
+	// first try raw float conversion
+	val, err := strconv.ParseFloat(str, 64)
+	if err == nil {
+		return val, true
+	}
+
+	if len(str) == 1 {
+		return 0.0, false
+	}
+
+	// is it a division?
+	if str[0] == '/' {
+		val, err := strconv.ParseFloat(str[1:], 64)
+		if err == nil {
+			return n.initVal / val, true
 		}
 	}
 
-	val, err := expr.Evaluate(nil)
-	switch val := val.(type) {
-	case float64:
-		return val, nil
-	default:
-		return 0.0, err
-	}
+	return 0.0, false
 }

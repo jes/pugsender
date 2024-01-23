@@ -24,3 +24,4 @@ save settings to file
 don't draw lines on toolpath view when changing work offset
 zoom toolpath view to fit content
 prevent submitting the MDI if there is nothing to submit to? (e.g. disconnected)
+ctrl-Z to undo WCO changes

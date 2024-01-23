@@ -8,6 +8,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"gioui.org/text"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 
@@ -65,10 +66,16 @@ func (n *NumPop) Layout(gtx C, location image.Point) D {
 
 	n.editor.Focus()
 
-	dims := Panel{Width: 1, CornerRadius: 5, Color: grey(128), BackgroundColor: grey(32)}.Layout(gtx, func(gtx C) D {
+	dims := Panel{Width: 1, CornerRadius: 5, Color: grey(128), BackgroundColor: grey(32), Padding: 4}.Layout(gtx, func(gtx C) D {
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 			layout.Rigid(func(gtx C) D {
-				return material.H4(n.app.th, fmt.Sprintf("%.3f", n.initVal)).Layout(gtx)
+				v := n.initVal
+				if val, err := n.Value(); err == nil {
+					v = val
+				}
+				label := material.H4(n.app.th, fmt.Sprintf("%.3f ", v))
+				label.Alignment = text.End
+				return label.Layout(gtx)
 			}),
 			layout.Rigid(func(gtx C) D {
 				// TODO: refactor this and the MDI editor into a common input box component
@@ -95,9 +102,10 @@ func (n *NumPop) Layout(gtx C, location image.Point) D {
 func (n *NumPop) Value() (float64, error) {
 	expr, err := govaluate.NewEvaluableExpression(n.editor.Text())
 	if err != nil {
-		// if the expression won't parse, try prefixing the initial value,
+		// if the expression won't parse as-is, try prefixing the initial value,
 		// this makes inputs like "+1", "/2" work as expected
-		expr, err = govaluate.NewEvaluableExpression(fmt.Sprintf("%f", n.initVal) + " " + n.editor.Text())
+		// XXX: is there anything this could get wrong?
+		expr, err = govaluate.NewEvaluableExpression(fmt.Sprintf("%f %s", n.initVal, n.editor.Text()))
 		if err != nil {
 			return 0.0, err
 		}

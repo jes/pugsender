@@ -19,6 +19,7 @@ type ToolpathView struct {
 	path            *Path
 	dragStart       f32.Point
 	dragStartCentre V4d
+	dragPoint       V4d
 	dragging        bool
 	hovering        bool
 	hoverPoint      V4d
@@ -86,6 +87,7 @@ func (tp *ToolpathView) LayoutImage(gtx C) D {
 					tp.dragging = true
 					tp.dragStart = gtxE.Position
 					tp.dragStartCentre = tp.path.centre
+					tp.dragPoint = V4d{X: xMm, Y: yMm}
 				}
 				origCentre := f32.Point{X: float32(tp.dragStartCentre.X), Y: float32(tp.dragStartCentre.Y)}
 				newCentre := origCentre.Add((tp.dragStart.Sub(gtxE.Position)).Div(float32(tp.path.pxPerMm)))
@@ -110,7 +112,11 @@ func (tp *ToolpathView) LayoutImage(gtx C) D {
 			} else if gtxE.Kind == pointer.Leave {
 				tp.hovering = false
 			}
-			tp.hoverPoint = V4d{X: xMm, Y: yMm}
+			if tp.dragging {
+				tp.hoverPoint = tp.dragPoint
+			} else {
+				tp.hoverPoint = V4d{X: xMm, Y: yMm}
+			}
 		}
 	}
 

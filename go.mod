@@ -5,6 +5,7 @@ go 1.21.6
 require (
 	gioui.org v0.4.2
 	github.com/llgcode/draw2d v0.0.0-20231212091825-f55e0c776b44
+	github.com/soniah/evaler v2.2.0+incompatible
 	go.bug.st/serial v1.6.1
 )
 

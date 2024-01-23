@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"image"
-	"strconv"
 
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -12,6 +11,8 @@ import (
 	"gioui.org/text"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+
+	"github.com/soniah/evaler"
 )
 
 type NumPop struct {
@@ -98,29 +99,24 @@ func (n *NumPop) Layout(gtx C, location image.Point) D {
 	return dims
 }
 
+// https://stackoverflow.com/a/65484336
 func (n *NumPop) Value() (float64, bool) {
-	str := n.editor.Text()
-	if len(str) == 0 {
-		return 0.0, false
-	}
-
-	// first try raw float conversion
-	val, err := strconv.ParseFloat(str, 64)
-	if err == nil {
+	// first try the expression as-is
+	val, ok := eval(n.editor.Text())
+	if ok {
 		return val, true
 	}
 
-	if len(str) == 1 {
+	// failing that, try prepending the existing value (for "/2" etc.)
+	return eval(fmt.Sprintf("%f %s", n.initVal, n.editor.Text()))
+}
+
+func eval(line string) (float64, bool) {
+	valrat, err := evaler.Eval(line)
+	if err == nil {
+		val, _ := valrat.Float64()
+		return val, true
+	} else {
 		return 0.0, false
 	}
-
-	// is it a division?
-	if str[0] == '/' {
-		val, err := strconv.ParseFloat(str[1:], 64)
-		if err == nil {
-			return n.initVal / val, true
-		}
-	}
-
-	return 0.0, false
 }

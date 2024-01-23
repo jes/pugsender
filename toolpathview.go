@@ -24,6 +24,7 @@ type ToolpathView struct {
 	hovering        bool
 	hoverPoint      V4d
 	rendering       bool
+	imageOp         paint.ImageOp
 }
 
 func NewToolpathView(app *App) *ToolpathView {
@@ -34,6 +35,7 @@ func NewToolpathView(app *App) *ToolpathView {
 	tp.path.showAxes = true
 	tp.path.showGridLines = true
 	tp.path.Render()
+	tp.imageOp = paint.NewImageOp(tp.path.Image)
 	return tp
 }
 
@@ -45,10 +47,14 @@ func (tp *ToolpathView) Layout(gtx C) D {
 
 	// render the toolpath in a different goroutine so as not to
 	// block the main UI
+	// TODO: this would appear to trigger constant unnecessary redraws, instead
+	// we should get some signal from the Path that says whether or not it
+	// needs re-drawing, and only redraw it if it does
 	if !tp.rendering {
 		tp.rendering = true
 		go func() {
 			tp.path.Render()
+			tp.imageOp = paint.NewImageOp(tp.path.Image)
 			tp.rendering = false
 			tp.app.w.Invalidate()
 		}()
@@ -127,7 +133,7 @@ func (tp *ToolpathView) LayoutImage(gtx C) D {
 		tp.app.w.Invalidate()
 	}
 	im := widget.Image{
-		Src:   paint.NewImageOp(tp.path.Image),
+		Src:   tp.imageOp,
 		Scale: 1.0 / gtx.Metric.PxPerDp,
 	}
 

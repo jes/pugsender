@@ -64,12 +64,23 @@ func (p *Path) Render() {
 
 	opts := p.PathOpts
 
-	p.RenderBackground()
-	p.RenderToolpath()
-	p.RenderForeground()
+	changed := false
+	if p.RenderBackground() {
+		changed = true
+	}
+	if p.RenderToolpath() {
+		changed = true
+	}
+	if p.RenderForeground() {
+		changed = true
+	}
 
 	p.ForceRedraw = false
 	p.last = opts
+
+	if !changed {
+		return
+	}
 
 	bounds := image.Rect(0, 0, p.widthPx, p.heightPx)
 	composite := image.NewRGBA(bounds)
@@ -80,14 +91,14 @@ func (p *Path) Render() {
 	p.Image = composite
 }
 
-func (p *Path) RenderBackground() {
+func (p *Path) RenderBackground() bool {
 	eps := 0.000001
 	if !p.ForceRedraw &&
 		p.showAxes == p.last.showAxes &&
 		p.showGridLines == p.last.showGridLines &&
 		p.axes.Sub(p.last.axes).Length() < eps {
 		// no need to re-render
-		return
+		return false
 	}
 
 	p.backgroundLayer = image.NewRGBA(image.Rect(0, 0, p.widthPx, p.heightPx))
@@ -114,14 +125,16 @@ func (p *Path) RenderBackground() {
 		p.DrawVLine(gc, math.Floor(centrex), rgb(64, 0, 0))
 		p.DrawHLine(gc, math.Floor(centrey), rgb(0, 64, 0))
 	}
+
+	return true
 }
 
-func (p *Path) RenderToolpath() {
+func (p *Path) RenderToolpath() bool {
 	l := len(p.positions)
 	if !p.ForceRedraw &&
 		p.drawnPositions == l {
 		// no need to re-render
-		return
+		return false
 	}
 
 	startIdx := p.drawnPositions - 1
@@ -141,14 +154,16 @@ func (p *Path) RenderToolpath() {
 
 		p.drawnPositions = l
 	}
+
+	return true
 }
 
-func (p *Path) RenderForeground() {
+func (p *Path) RenderForeground() bool {
 	eps := 0.000001
 	if !p.ForceRedraw &&
 		p.crossHair.Sub(p.last.crossHair).Length() < eps {
 		// no need to re-render
-		return
+		return false
 	}
 
 	p.foregroundLayer = image.NewRGBA(image.Rect(0, 0, p.widthPx, p.heightPx))
@@ -159,6 +174,8 @@ func (p *Path) RenderForeground() {
 		x, y := p.MmToPx(p.crossHair.X, p.crossHair.Y)
 		p.DrawCrossHair(gc, x, y, 12)
 	}
+
+	return true
 }
 
 func (p *Path) DrawGridLines(gc *draw2dimg.GraphicContext, step float64, col color.NRGBA) {

@@ -32,6 +32,7 @@ func NewToolpathView(app *App) *ToolpathView {
 	tp.path.showCrossHair = true
 	tp.path.showAxes = true
 	tp.path.showGridLines = true
+	tp.path.Render()
 	return tp
 }
 

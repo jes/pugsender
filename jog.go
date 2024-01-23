@@ -54,7 +54,7 @@ func (j *JogControl) Cancel() {
 		return
 	}
 	// 0x85 = Jog Cancel
-	j.app.g.Write([]byte{0x85})
+	j.app.g.CommandRealtime(0x85)
 	j.HaveJogged = false
 }
 

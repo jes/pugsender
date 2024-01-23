@@ -275,13 +275,13 @@ func (a *App) KeyPress(e key.Event) {
 		// JOG MODE
 		if e.Name == "H" {
 			// feed hold
-			a.g.Write([]byte{'!'})
+			a.g.CommandRealtime('!')
 		} else if e.Name == "R" {
 			// soft-reset
-			a.g.Write([]byte{0x18})
+			a.g.CommandRealtime(0x18)
 		} else if e.Name == "S" {
 			// cycle-start
-			a.g.Write([]byte{'~'})
+			a.g.CommandRealtime('~')
 		}
 	}
 

@@ -66,6 +66,10 @@ func NewGrbl(port io.ReadWriteCloser, portName string) *Grbl {
 // Write() response is received, else the Write() response will
 // go to the Command() caller, and everything will be out of sync
 func (g *Grbl) Command(line string) chan string {
+	if g.Closed {
+		return nil
+	}
+
 	// not enough space in Grbl's input buffer? reject the command
 	if g.SerialFree <= len(line)+1 {
 		return nil
@@ -78,7 +82,7 @@ func (g *Grbl) Command(line string) chan string {
 
 	_, err := g.Write([]byte(line + "\n"))
 	if err != nil {
-		// error on write? close the connection and reject the command
+		fmt.Fprintf(os.Stderr, "error from %s: %v\n", g.PortName, err)
 		g.Close()
 		return nil
 	}
@@ -91,11 +95,29 @@ func (g *Grbl) Command(line string) chan string {
 //
 // spawn a goroutine to consume and ignore the response
 func (g *Grbl) CommandIgnore(line string) bool {
+	if g.Closed {
+		return false
+	}
 	c := g.Command(line)
 	if c == nil {
 		return false
 	}
 	go func() { <-c }() // ignore response
+	return true
+}
+
+// send the given realtime command, return true if successful
+// or false if not
+func (g *Grbl) CommandRealtime(cmd byte) bool {
+	if g.Closed {
+		return false
+	}
+	_, err := g.Write([]byte{cmd})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error from %s: %v\n", g.PortName, err)
+		g.Close()
+		return false
+	}
 	return true
 }
 
@@ -176,16 +198,7 @@ func (g *Grbl) Monitor() {
 
 // request a status update, return true if ok or false if not
 func (g *Grbl) RequestStatusUpdate() bool {
-	if g.Closed {
-		return false
-	}
-	_, err := g.Write([]byte{'?'})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error asking for status update, closing: %v", err)
-		g.Close()
-		return false
-	}
-	return true
+	return g.CommandRealtime('?')
 }
 
 // request active gcodes, return true if ok or false if not

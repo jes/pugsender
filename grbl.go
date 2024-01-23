@@ -37,9 +37,14 @@ type Grbl struct {
 	Probe           bool
 	StatusUpdate    chan struct{}
 	UpdateTime      time.Time
-	ResponseQueue   []chan string
+	ResponseQueue   []GrblResponse
 	ResponseLock    sync.Mutex
 	GCodes          string
+}
+
+type GrblResponse struct {
+	responseChan chan string
+	command      string
 }
 
 func NewGrbl(port io.ReadWriteCloser, portName string) *Grbl {
@@ -48,6 +53,7 @@ func NewGrbl(port io.ReadWriteCloser, portName string) *Grbl {
 		PortName:     portName,
 		Status:       "Connecting",
 		StatusUpdate: make(chan struct{}),
+		SerialFree:   128,
 	}
 	if port == nil {
 		g.Status = "Disconnected"
@@ -67,26 +73,32 @@ func (g *Grbl) Command(line string) chan string {
 		return nil
 	}
 
+	// canonicalise line ending
+	line = strings.TrimSpace(line) + "\n"
+
 	// not enough space in Grbl's input buffer? reject the command
-	// +1 for the trailing \n
 	// +1 because we need to leave at least 1 byte free else Grbl locks up
-	if g.SerialFree <= len(line)+1+1 {
+	if g.SerialFree <= len(line)+1 {
 		return nil
 	}
 
-	responseChan := make(chan string)
+	r := GrblResponse{
+		responseChan: make(chan string),
+		command:      line,
+	}
 	g.ResponseLock.Lock()
-	g.ResponseQueue = append(g.ResponseQueue, responseChan)
+	g.ResponseQueue = append(g.ResponseQueue, r)
 	g.ResponseLock.Unlock()
 
-	_, err := g.Write([]byte(line + "\n"))
+	g.SerialFree -= len(line)
+	_, err := g.Write([]byte(line))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error from %s: %v\n", g.PortName, err)
 		g.Close()
 		return nil
 	}
 
-	return responseChan
+	return r.responseChan
 }
 
 // add the given line to the command queue, return true if
@@ -125,7 +137,6 @@ func (g *Grbl) Write(p []byte) (n int, err error) {
 	// TODO: is there a race condition where concurrent writes can end up interleaved?
 	// TODO: is there a race condition where we decrease SerialFree, then read a status report that still has the old SerialFree in it,
 	// and then send some more bytes but the buffer is already full?
-	g.SerialFree -= len(p)
 	os.Stdout.Write(p)
 	return g.SerialPort.Write(p)
 }
@@ -166,7 +177,6 @@ func (g *Grbl) Monitor() {
 
 	// ask for active g-codes every second, until closed
 	ticker2 := time.NewTicker(time.Second)
-	g.RequestGCodes()
 	go func() {
 		for {
 			<-ticker2.C
@@ -266,12 +276,15 @@ func (g *Grbl) ParseStatus(status string) {
 			g.MistCoolant = strings.Contains(val, "M")
 		} else if keylc == "bf" { // buffers
 			g.PlannerFree = int(valv4d.X)
-			g.SerialFree = int(valv4d.Y)
+			serialFree := int(valv4d.Y)
+			if serialFree != g.SerialFree {
+				fmt.Fprintf(os.Stderr, "BUG?? serial buffer space out of sync: we thought %d bytes free, but Grbl reports %d\n", g.SerialFree, serialFree)
+			}
 			if g.PlannerFree > g.PlannerSize {
 				g.PlannerSize = g.PlannerFree
 			}
-			if g.SerialFree > g.SerialSize {
-				g.SerialSize = g.SerialFree
+			if serialFree > g.SerialSize {
+				g.SerialSize = serialFree
 			}
 		} else if keylc == "fs" { // feed/speed
 			g.FeedRate = valv4d.X
@@ -308,8 +321,6 @@ func (g *Grbl) ParseGCodes(line string) {
 }
 
 func (g *Grbl) SendResponse(line string) {
-	g.ResponseLock.Lock()
-	defer g.ResponseLock.Unlock()
 
 	l := len(g.ResponseQueue)
 	if l == 0 {
@@ -317,10 +328,14 @@ func (g *Grbl) SendResponse(line string) {
 		return
 	}
 
-	responseChan := g.ResponseQueue[0]
+	g.ResponseLock.Lock()
+	r := g.ResponseQueue[0]
 	g.ResponseQueue = g.ResponseQueue[1:]
-	responseChan <- line
-	close(responseChan)
+	g.ResponseLock.Unlock()
+
+	g.SerialFree += len(r.command)
+	r.responseChan <- line
+	close(r.responseChan)
 }
 
 // extrapolated Wpos

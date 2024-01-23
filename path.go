@@ -9,8 +9,7 @@ import (
 	"github.com/llgcode/draw2d/draw2dimg"
 )
 
-type Path struct {
-	positions     []V4d
+type PathOpts struct {
 	showAxes      bool
 	showCrossHair bool
 	showGridLines bool
@@ -20,11 +19,27 @@ type Path struct {
 	widthPx       int
 	heightPx      int
 	axes          V4d
-	Image         image.Image
+}
+
+type Path struct {
+	PathOpts
+	last PathOpts
+
+	positions []V4d
+
+	ForceRedraw bool
+
+	Image           image.Image
+	backgroundLayer *image.RGBA
+	toolpathLayer   *image.RGBA
+	foregroundLayer *image.RGBA
 }
 
 func NewPath() *Path {
-	return &Path{pxPerMm: 10}
+	return &Path{
+		PathOpts:    PathOpts{pxPerMm: 10},
+		ForceRedraw: true,
+	}
 }
 
 func (p *Path) Update(pos V4d) {
@@ -34,29 +49,42 @@ func (p *Path) Update(pos V4d) {
 	p.positions = append(p.positions, pos)
 }
 
-// TODO: store the image we made, and next time we render
-// with the same parameters, only render the new points on
-// top, instead of starting from scratch every time
 func (p *Path) Render() {
+	eps := 0.000001
+	if p.widthPx != p.last.widthPx || p.heightPx != p.last.heightPx || math.Abs(p.pxPerMm-p.last.pxPerMm) > eps || p.centre.Sub(p.last.centre).Length() > eps {
+		p.ForceRedraw = true
+	}
+
+	opts := p.PathOpts
+
+	p.RenderBackground()
+	p.RenderToolpath()
+	p.RenderForeground()
+
+	p.ForceRedraw = false
+	p.last = opts
+
 	bounds := image.Rect(0, 0, p.widthPx, p.heightPx)
-	backgroundLayer := image.NewRGBA(bounds)
-	toolpathLayer := image.NewRGBA(bounds)
-	foregroundLayer := image.NewRGBA(bounds)
-
-	p.RenderBackground(backgroundLayer)
-	p.RenderToolpath(toolpathLayer)
-	p.RenderForeground(foregroundLayer)
-
 	composite := image.NewRGBA(bounds)
-	draw.Draw(composite, bounds, backgroundLayer, image.Point{}, draw.Src)
-	draw.Draw(composite, bounds, toolpathLayer, image.Point{}, draw.Over)
-	draw.Draw(composite, bounds, foregroundLayer, image.Point{}, draw.Over)
+	draw.Draw(composite, bounds, p.backgroundLayer, image.Point{}, draw.Src)
+	draw.Draw(composite, bounds, p.toolpathLayer, image.Point{}, draw.Over)
+	draw.Draw(composite, bounds, p.foregroundLayer, image.Point{}, draw.Over)
 
 	p.Image = composite
 }
 
-func (p *Path) RenderBackground(img *image.RGBA) {
-	gc := draw2dimg.NewGraphicContext(img)
+func (p *Path) RenderBackground() {
+	eps := 0.000001
+	if !p.ForceRedraw &&
+		p.showAxes == p.last.showAxes &&
+		p.showGridLines == p.last.showGridLines &&
+		p.axes.Sub(p.last.axes).Length() < eps {
+		// no need to re-render
+		return
+	}
+
+	p.backgroundLayer = image.NewRGBA(image.Rect(0, 0, p.widthPx, p.heightPx))
+	gc := draw2dimg.NewGraphicContext(p.backgroundLayer)
 
 	centrex, centrey := p.MmToPx(p.axes.X, p.axes.Y)
 
@@ -81,8 +109,9 @@ func (p *Path) RenderBackground(img *image.RGBA) {
 	}
 }
 
-func (p *Path) RenderToolpath(img *image.RGBA) {
-	gc := draw2dimg.NewGraphicContext(img)
+func (p *Path) RenderToolpath() {
+	p.toolpathLayer = image.NewRGBA(image.Rect(0, 0, p.widthPx, p.heightPx))
+	gc := draw2dimg.NewGraphicContext(p.toolpathLayer)
 
 	l := len(p.positions)
 	if l > 0 {
@@ -95,8 +124,16 @@ func (p *Path) RenderToolpath(img *image.RGBA) {
 	}
 }
 
-func (p *Path) RenderForeground(img *image.RGBA) {
-	gc := draw2dimg.NewGraphicContext(img)
+func (p *Path) RenderForeground() {
+	eps := 0.000001
+	if !p.ForceRedraw &&
+		p.crossHair.Sub(p.last.crossHair).Length() < eps {
+		// no need to re-render
+		return
+	}
+
+	p.foregroundLayer = image.NewRGBA(image.Rect(0, 0, p.widthPx, p.heightPx))
+	gc := draw2dimg.NewGraphicContext(p.foregroundLayer)
 
 	if p.showCrossHair {
 		gc.SetStrokeColor(grey(128))

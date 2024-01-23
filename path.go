@@ -43,9 +43,20 @@ func (p *Path) Render() {
 	toolpathLayer := image.NewRGBA(bounds)
 	foregroundLayer := image.NewRGBA(bounds)
 
-	backgroundGc := draw2dimg.NewGraphicContext(backgroundLayer)
-	toolpathGc := draw2dimg.NewGraphicContext(toolpathLayer)
-	foregroundGc := draw2dimg.NewGraphicContext(foregroundLayer)
+	p.RenderBackground(backgroundLayer)
+	p.RenderToolpath(toolpathLayer)
+	p.RenderForeground(foregroundLayer)
+
+	composite := image.NewRGBA(bounds)
+	draw.Draw(composite, bounds, backgroundLayer, image.Point{}, draw.Src)
+	draw.Draw(composite, bounds, toolpathLayer, image.Point{}, draw.Over)
+	draw.Draw(composite, bounds, foregroundLayer, image.Point{}, draw.Over)
+
+	p.Image = composite
+}
+
+func (p *Path) RenderBackground(img *image.RGBA) {
+	gc := draw2dimg.NewGraphicContext(img)
 
 	centrex, centrey := p.MmToPx(p.axes.X, p.axes.Y)
 
@@ -58,39 +69,40 @@ func (p *Path) Render() {
 		// convert back to pixels
 		spacingPx := spacingMm * p.pxPerMm
 
-		p.DrawGridLines(backgroundGc, spacingPx, grey(64))
+		p.DrawGridLines(gc, spacingPx, grey(64))
 		secondaryIntensity := interp(spacingPx, minSpacing, minSpacing*10)
 		secondaryCol := grey(uint8(16 + float64(48)*secondaryIntensity))
-		p.DrawGridLines(backgroundGc, spacingPx*0.1, secondaryCol)
+		p.DrawGridLines(gc, spacingPx*0.1, secondaryCol)
 	}
 
 	if p.showAxes {
-		p.DrawVLine(backgroundGc, math.Floor(centrex), rgb(64, 0, 0))
-		p.DrawHLine(backgroundGc, math.Floor(centrey), rgb(0, 64, 0))
+		p.DrawVLine(gc, math.Floor(centrex), rgb(64, 0, 0))
+		p.DrawHLine(gc, math.Floor(centrey), rgb(0, 64, 0))
 	}
+}
+
+func (p *Path) RenderToolpath(img *image.RGBA) {
+	gc := draw2dimg.NewGraphicContext(img)
 
 	l := len(p.positions)
 	if l > 0 {
-		toolpathGc.SetStrokeColor(color.White)
-		toolpathGc.MoveTo(p.MmToPx(p.positions[0].X, p.positions[0].Y))
+		gc.SetStrokeColor(color.White)
+		gc.MoveTo(p.MmToPx(p.positions[0].X, p.positions[0].Y))
 		for _, pos := range p.positions {
-			toolpathGc.LineTo(p.MmToPx(pos.X, pos.Y))
+			gc.LineTo(p.MmToPx(pos.X, pos.Y))
 		}
-		toolpathGc.Stroke()
+		gc.Stroke()
 	}
+}
+
+func (p *Path) RenderForeground(img *image.RGBA) {
+	gc := draw2dimg.NewGraphicContext(img)
 
 	if p.showCrossHair {
-		foregroundGc.SetStrokeColor(grey(128))
+		gc.SetStrokeColor(grey(128))
 		x, y := p.MmToPx(p.crossHair.X, p.crossHair.Y)
-		p.DrawCrossHair(foregroundGc, x, y, 12)
+		p.DrawCrossHair(gc, x, y, 12)
 	}
-
-	composite := image.NewRGBA(bounds)
-	draw.Draw(composite, bounds, backgroundLayer, image.Point{}, draw.Src)
-	draw.Draw(composite, bounds, toolpathLayer, image.Point{}, draw.Over)
-	draw.Draw(composite, bounds, foregroundLayer, image.Point{}, draw.Over)
-
-	p.Image = composite
 }
 
 func (p *Path) DrawGridLines(gc *draw2dimg.GraphicContext, step float64, col color.NRGBA) {

@@ -316,6 +316,8 @@ func (g *Grbl) ParseStatus(status string) {
 	g.Probe = newProbeState
 	g.Pn = newPn
 
+	// TODO: race window between updating WCO and updating MPos,
+	// probably want to make use accessor functions with a mutex
 	if givenMpos {
 		g.Wpos = g.Mpos.Sub(g.Wco)
 	} else if givenWpos {

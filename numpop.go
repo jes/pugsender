@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"image"
-	"strconv"
 
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -11,6 +10,8 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+
+	"github.com/Knetic/govaluate"
 )
 
 type NumPop struct {
@@ -44,7 +45,7 @@ func (n *NumPop) Layout(gtx C, location image.Point) D {
 	for _, e := range n.editor.Events() {
 		switch e.(type) {
 		case widget.SubmitEvent:
-			val, err := strconv.ParseFloat(n.editor.Text(), 64)
+			val, err := n.Value()
 			n.cb(err == nil, val)
 		default:
 			fmt.Printf("[unhandled NumPop event] %#v\n", e)
@@ -89,4 +90,24 @@ func (n *NumPop) Layout(gtx C, location image.Point) D {
 	op.Defer(gtx.Ops, macro.Stop())
 
 	return dims
+}
+
+func (n *NumPop) Value() (float64, error) {
+	expr, err := govaluate.NewEvaluableExpression(n.editor.Text())
+	if err != nil {
+		// if the expression won't parse, try prefixing the initial value,
+		// this makes inputs like "+1", "/2" work as expected
+		expr, err = govaluate.NewEvaluableExpression(fmt.Sprintf("%f", n.initVal) + " " + n.editor.Text())
+		if err != nil {
+			return 0.0, err
+		}
+	}
+
+	val, err := expr.Evaluate(nil)
+	switch val := val.(type) {
+	case float64:
+		return val, nil
+	default:
+		return 0.0, err
+	}
 }

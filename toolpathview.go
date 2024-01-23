@@ -39,8 +39,8 @@ func NewToolpathView(app *App) *ToolpathView {
 func (tp *ToolpathView) Layout(gtx C) D {
 	tp.path.Update(tp.app.g.Mpos)
 	tp.path.crossHair = tp.app.g.MposExt()
-	tp.path.axes.X = -tp.app.g.Wco.X
-	tp.path.axes.Y = -tp.app.g.Wco.Y
+	tp.path.axes.X = tp.app.g.Wco.X
+	tp.path.axes.Y = tp.app.g.Wco.Y
 
 	// render the toolpath in a different goroutine so as not to
 	// block the main UI
@@ -76,8 +76,8 @@ func (tp *ToolpathView) LayoutImage(gtx C) D {
 		case pointer.Event:
 			// get click point in work coordinates
 			xMm, yMm := tp.path.PxToMm(float64(gtxE.Position.X), float64(gtxE.Position.Y))
-			xMm += tp.app.g.Wco.X
-			yMm += tp.app.g.Wco.Y
+			xMm -= tp.app.g.Wco.X
+			yMm -= tp.app.g.Wco.Y
 
 			if gtxE.Kind == pointer.Scroll {
 				tp.path.pxPerMm *= 1.0 - float64(gtxE.Scroll.Y)/100.0

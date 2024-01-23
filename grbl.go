@@ -13,6 +13,7 @@ import (
 type Grbl struct {
 	SerialPort      io.ReadWriteCloser
 	PortName        string
+	Ready           bool
 	Closed          bool
 	Status          string
 	Wco             V4d
@@ -69,7 +70,7 @@ func NewGrbl(port io.ReadWriteCloser, portName string) *Grbl {
 // only use this function for commands that expect a response,
 // use CommandRealtime() for commands that give no response
 func (g *Grbl) Command(line string) chan string {
-	if g.Closed {
+	if !g.Ready {
 		return nil
 	}
 
@@ -106,7 +107,7 @@ func (g *Grbl) Command(line string) chan string {
 //
 // spawn a goroutine to consume and ignore the response
 func (g *Grbl) CommandIgnore(line string) bool {
-	if g.Closed {
+	if !g.Ready {
 		return false
 	}
 	c := g.Command(line)
@@ -147,6 +148,7 @@ func (g *Grbl) Close() error {
 		return nil
 	}
 	g.Closed = true
+	g.Ready = false
 	g.Status = "Disconnected"
 	var err error
 	if g.SerialPort != nil {
@@ -162,8 +164,15 @@ func (g *Grbl) Monitor() {
 		return
 	}
 
-	// ask for a status update every 100ms, until Closed
-	ticker := time.NewTicker(100 * time.Millisecond)
+	// ask for a status update every 200ms, until Closed
+	//
+	// "We recommend querying Grbl for a ? real-time status report
+	// at no more than 5Hz. 10Hz may be possible, but at some point,
+	// there are diminishing returns and you are taxing Grbl's CPU
+	// more by asking it to generate and send a lot of position
+	// data."
+	// https://github.com/grbl/grbl/wiki/Interfacing-with-Grbl
+	ticker := time.NewTicker(200 * time.Millisecond)
 	g.RequestStatusUpdate()
 	go func() {
 		for {
@@ -215,6 +224,9 @@ func (g *Grbl) RequestGCodes() bool {
 	if g.Closed {
 		return false
 	}
+	if !g.Ready {
+		return true
+	}
 	// TODO: also request gcodes whenever we think they might have changed?
 	ok := g.CommandIgnore("$G")
 	if !ok && g.Closed {
@@ -226,7 +238,9 @@ func (g *Grbl) RequestGCodes() bool {
 // "status" should be a status report line from Grbl
 // send a struct{} to the StatusUpdate channel whenever there isa new status report
 func (g *Grbl) ParseStatus(status string) {
-	prevWpos := g.Wpos
+	g.Ready = true
+
+	prevMpos := g.Mpos
 	prevUpdateTime := g.UpdateTime
 
 	status = strings.Trim(status, "<>")
@@ -303,14 +317,14 @@ func (g *Grbl) ParseStatus(status string) {
 	g.Pn = newPn
 
 	if givenMpos {
-		g.Wpos = g.Mpos.Add(g.Wco)
+		g.Wpos = g.Mpos.Sub(g.Wco)
 	} else if givenWpos {
-		g.Mpos = g.Wpos.Sub(g.Wco)
+		g.Mpos = g.Wpos.Add(g.Wco)
 	}
 
 	g.UpdateTime = time.Now()
 
-	distanceMoved := g.Wpos.Sub(prevWpos)
+	distanceMoved := g.Mpos.Sub(prevMpos)
 	g.Vel = distanceMoved.Div(g.UpdateTime.Sub(prevUpdateTime).Minutes())
 
 	g.StatusUpdate <- struct{}{}

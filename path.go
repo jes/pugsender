@@ -3,6 +3,7 @@ package main
 import (
 	"image"
 	"image/color"
+	"image/draw"
 	"math"
 
 	"github.com/llgcode/draw2d/draw2dimg"
@@ -37,8 +38,14 @@ func (p *Path) Update(pos V4d) {
 // with the same parameters, only render the new points on
 // top, instead of starting from scratch every time
 func (p *Path) Render() {
-	img := image.NewRGBA(image.Rect(0, 0, p.widthPx, p.heightPx))
-	gc := draw2dimg.NewGraphicContext(img)
+	bounds := image.Rect(0, 0, p.widthPx, p.heightPx)
+	backgroundLayer := image.NewRGBA(bounds)
+	toolpathLayer := image.NewRGBA(bounds)
+	foregroundLayer := image.NewRGBA(bounds)
+
+	backgroundGc := draw2dimg.NewGraphicContext(backgroundLayer)
+	toolpathGc := draw2dimg.NewGraphicContext(toolpathLayer)
+	foregroundGc := draw2dimg.NewGraphicContext(foregroundLayer)
 
 	centrex, centrey := p.MmToPx(p.axes.X, p.axes.Y)
 
@@ -51,34 +58,39 @@ func (p *Path) Render() {
 		// convert back to pixels
 		spacingPx := spacingMm * p.pxPerMm
 
-		p.DrawGridLines(gc, spacingPx, grey(64))
+		p.DrawGridLines(backgroundGc, spacingPx, grey(64))
 		secondaryIntensity := interp(spacingPx, minSpacing, minSpacing*10)
 		secondaryCol := grey(uint8(16 + float64(48)*secondaryIntensity))
-		p.DrawGridLines(gc, spacingPx*0.1, secondaryCol)
+		p.DrawGridLines(backgroundGc, spacingPx*0.1, secondaryCol)
 	}
 
 	if p.showAxes {
-		p.DrawVLine(gc, math.Floor(centrex), rgb(64, 0, 0))
-		p.DrawHLine(gc, math.Floor(centrey), rgb(0, 64, 0))
+		p.DrawVLine(backgroundGc, math.Floor(centrex), rgb(64, 0, 0))
+		p.DrawHLine(backgroundGc, math.Floor(centrey), rgb(0, 64, 0))
 	}
 
 	l := len(p.positions)
 	if l > 0 {
-		gc.SetStrokeColor(color.White)
-		gc.MoveTo(p.MmToPx(p.positions[0].X, p.positions[0].Y))
+		toolpathGc.SetStrokeColor(color.White)
+		toolpathGc.MoveTo(p.MmToPx(p.positions[0].X, p.positions[0].Y))
 		for _, pos := range p.positions {
-			gc.LineTo(p.MmToPx(pos.X, pos.Y))
+			toolpathGc.LineTo(p.MmToPx(pos.X, pos.Y))
 		}
-		gc.Stroke()
+		toolpathGc.Stroke()
 	}
 
 	if p.showCrossHair {
-		gc.SetStrokeColor(grey(128))
+		foregroundGc.SetStrokeColor(grey(128))
 		x, y := p.MmToPx(p.crossHair.X, p.crossHair.Y)
-		p.DrawCrossHair(gc, x, y, 12)
+		p.DrawCrossHair(foregroundGc, x, y, 12)
 	}
 
-	p.Image = img
+	composite := image.NewRGBA(bounds)
+	draw.Draw(composite, bounds, backgroundLayer, image.Point{}, draw.Src)
+	draw.Draw(composite, bounds, toolpathLayer, image.Point{}, draw.Over)
+	draw.Draw(composite, bounds, foregroundLayer, image.Point{}, draw.Over)
+
+	p.Image = composite
 }
 
 func (p *Path) DrawGridLines(gc *draw2dimg.GraphicContext, step float64, col color.NRGBA) {

@@ -72,7 +72,16 @@ func (a *App) ShowDROEditor(axis string, initVal float64) {
 	})
 }
 
+// TODO: this "entered" map is horrible, should instead
+// make each coordinate of the DRO be its own component and track
+// its own state
+var entered map[string]bool
+
 func (a *App) LayoutDROCoord(gtx C, name string, val float64) D {
+	if entered == nil {
+		entered = make(map[string]bool)
+	}
+
 	for _, gtxEvent := range gtx.Events(name) {
 		switch gtxE := gtxEvent.(type) {
 		case pointer.Event:
@@ -86,16 +95,24 @@ func (a *App) LayoutDROCoord(gtx C, name string, val float64) D {
 				} else if name == "A" {
 					a.ShowDROEditor("A", a.g.Wpos.A)
 				}
+			} else if gtxE.Kind == pointer.Enter {
+				entered[name] = true
+			} else if gtxE.Kind == pointer.Leave {
+				entered[name] = false
 			}
 		}
 	}
 
-	readout := Readout{th: a.th, decimalPlaces: 3, TextSize: material.H4(a.th, "").TextSize, BackgroundColor: grey(0)}
+	g := grey(0)
+	if v, ok := entered[name]; ok && v {
+		g = grey(16)
+	}
+	readout := Readout{th: a.th, decimalPlaces: 3, TextSize: material.H4(a.th, "").TextSize, BackgroundColor: g}
 	dims := readout.Layout(gtx, name, val)
 
 	defer clip.Rect(image.Rectangle{Max: dims.Size}).Push(gtx.Ops).Pop()
 	pointer.InputOp{
-		Kinds: pointer.Press,
+		Kinds: pointer.Press | pointer.Enter | pointer.Leave,
 		Tag:   name, // TODO: a better tag?
 	}.Add(gtx.Ops)
 

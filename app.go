@@ -223,7 +223,7 @@ func (a *App) LayoutMDI(gtx C) D {
 }
 
 func (a *App) MDIInput(line string) {
-	a.g.Write([]byte(line + "\n"))
+	a.g.CommandIgnore(line)
 	fmt.Printf(" > [%s]\n", line)
 	if a.mode == ModeMDI {
 		a.mdi.Defocus()

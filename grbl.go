@@ -61,10 +61,7 @@ func NewGrbl(port io.ReadWriteCloser, portName string) *Grbl {
 // the queue, or nil if the queue is full
 //
 // only use this function for commands that expect a response,
-// and don't use Write() to send any commands that will give
-// a response if you intend to use Command() again before the
-// Write() response is received, else the Write() response will
-// go to the Command() caller, and everything will be out of sync
+// use CommandRealtime() for commands that give no response
 func (g *Grbl) Command(line string) chan string {
 	if g.Closed {
 		return nil

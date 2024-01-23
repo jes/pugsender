@@ -37,7 +37,7 @@ func (m *MDI) Layout(gtx C) D {
 			m.app.MDIInput(m.editor.Text())
 			m.editor.SetText("")
 		default:
-			fmt.Printf("%#v\n", e)
+			fmt.Printf("[unhandled MDI event] %#v\n", e)
 		}
 	}
 

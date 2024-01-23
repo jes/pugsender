@@ -28,6 +28,7 @@ const (
 	ModeJog
 	ModeRun
 	ModeMDI
+	ModeNum
 )
 
 func (m Mode) String() string {
@@ -39,6 +40,8 @@ func (m Mode) String() string {
 		return "RUN"
 	} else if m == ModeMDI {
 		return "MDI"
+	} else if m == ModeNum {
+		return "NUM"
 	} else {
 		return "???"
 	}
@@ -54,6 +57,8 @@ type App struct {
 	jog         JogControl
 
 	tp *ToolpathView
+
+	numpop *NumPop
 
 	split Split
 
@@ -153,7 +158,7 @@ func (a *App) Run() {
 			).Push(gtx.Ops)
 
 			keys := []string{
-				"(Ctrl)-+", "(Ctrl)--", "(Shift)-S", "(Shift)-R", "(Shift)-H", "(Shift)-G", "(Shift)-M", "(Shift)-J", key.NameEscape, key.NameLeftArrow, key.NameRightArrow, key.NameUpArrow, key.NameDownArrow, key.NamePageUp, key.NamePageDown,
+				"(Ctrl)-+", "(Ctrl)--", "(Shift)-S", "(Shift)-R", "(Shift)-H", "(Shift)-X", "(Shift)-G", "(Shift)-M", "(Shift)-J", key.NameEscape, key.NameLeftArrow, key.NameRightArrow, key.NameUpArrow, key.NameDownArrow, key.NamePageUp, key.NamePageDown,
 			}
 			key.InputOp{
 				Keys: key.Set(strings.Join(keys, "|")),
@@ -168,6 +173,11 @@ func (a *App) Run() {
 
 			// draw the application
 			a.Layout(gtx)
+
+			// draw a numeric input popup, if any
+			if a.mode == ModeNum && a.numpop != nil {
+				a.numpop.Layout(gtx)
+			}
 
 			eventArea.Pop()
 
@@ -241,6 +251,10 @@ func (a *App) PushMode(m Mode) {
 }
 
 func (a *App) PopMode() {
+	if a.mode == ModeNum {
+		// lose the reference to the NumPop when leaving ModeNum
+		a.numpop = nil
+	}
 	l := len(a.modeStack)
 	if l > 0 {
 		a.mode = a.modeStack[l-1]
@@ -284,6 +298,15 @@ func (a *App) KeyPress(e key.Event) {
 		} else if e.Name == "S" {
 			// cycle-start
 			a.g.CommandRealtime('~')
+		} else if e.Name == "X" {
+			a.numpop = NewNumPop(a, a.g.Wpos.X, image.Pt(100, 100), func(apply bool, val float64) {
+				fmt.Printf("apply=%v, val=%f\n", apply, val)
+				p := a.g.Wpos
+				p.X = val
+				a.g.SetWpos(p)
+				a.PopMode()
+			})
+			a.PushMode(ModeNum)
 		}
 	}
 

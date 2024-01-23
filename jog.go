@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"sync"
 	"time"
@@ -36,7 +37,10 @@ type JogControl struct {
 	FeedRate     float64
 	Increment    float64
 	TickerPeriod time.Duration
+	LastJog      time.Time
 	HaveJogged   bool
+	Target       V4d
+	Tick         chan struct{}
 }
 
 func NewJogControl(app *App) JogControl {
@@ -46,6 +50,7 @@ func NewJogControl(app *App) JogControl {
 		FeedRate:     100,
 		Increment:    1,
 		TickerPeriod: 100 * time.Millisecond,
+		Tick:         make(chan struct{}),
 	}
 }
 
@@ -61,74 +66,116 @@ func (j *JogControl) Cancel() {
 func (j *JogControl) Run() {
 	ticker := time.NewTicker(j.TickerPeriod)
 	for {
-		<-ticker.C
+		select {
+		case <-ticker.C:
+		case <-j.Tick:
+		}
+
+		// if no jogs have been sent in the last "gracePeriod",
+		// reset the target for any axis that is not moving
+		gracePeriod := 2000 * time.Millisecond
+		if time.Now().Sub(j.LastJog) > gracePeriod {
+			eps := 0.001
+			if math.Abs(j.app.g.Vel.X) < eps {
+				fmt.Printf("targetx = %.3f\n", j.app.g.Wpos.X)
+				j.Target.X = j.app.g.Wpos.X
+			}
+			if math.Abs(j.app.g.Vel.Y) < eps {
+				j.Target.Y = j.app.g.Wpos.Y
+			}
+			if math.Abs(j.app.g.Vel.Z) < eps {
+				j.Target.Z = j.app.g.Wpos.Z
+			}
+			if math.Abs(j.app.g.Vel.A) < eps {
+				j.Target.A = j.app.g.Wpos.A
+			}
+		}
+
 		j.keyHeldLock.RLock()
-		j.SingleContinuous()
+		j.SingleContinuous(false)
 		j.keyHeldLock.RUnlock()
 	}
 }
 
-func (j *JogControl) SingleContinuous() {
-	jogDir := make(map[string]int)
-	jogDir["X"] = 0
-	jogDir["Y"] = 0
-	jogDir["Z"] = 0
-	jogDir["A"] = 0
+func (j *JogControl) SendJogCommand(line string) bool {
+	j.LastJog = time.Now()
+	if j.app.g.PlannerFree < 2 {
+		return false
+	}
+	fmt.Println(line)
+	ok := j.app.g.CommandIgnore("$J=" + line)
+	if ok {
+		j.LastJog = time.Now()
+		j.HaveJogged = true
+		return true
+	} else {
+		fmt.Fprintf(os.Stderr, "BUG?? error while trying to jog, ignoring\n")
+		return false
+	}
+}
 
+func (j *JogControl) SingleContinuous(force bool) {
+	jogDist := j.FeedRate * j.TickerPeriod.Minutes()
+
+	anyJogs := false
 	for k, held := range j.keyHeld {
 		if held {
 			valid, axis, dir := JogAction(k)
 			if valid {
-				// holding + and - will cancel each other out, which is what we want
-				jogDir[axis] += dir
+				j.AddIncrement(axis, dir, jogDist)
+				anyJogs = true
 			}
 		}
 	}
 
-	jogLine := "$J=G91"
-	anyJogs := false
-	jogDist := j.FeedRate * j.TickerPeriod.Minutes()
-
-	for axis, dir := range jogDir {
-		if dir != 0 {
-			anyJogs = true
-			jogLine += fmt.Sprintf("%s%.3f", axis, float64(dir)*jogDist)
-		}
+	if anyJogs || force {
+		// TODO: support 4th axis jogging?
+		j.SendJogCommand(fmt.Sprintf("X%.3fY%.3fZ%.3fF%.3f", j.Target.X, j.Target.Y, j.Target.Z, j.FeedRate))
 	}
-
-	if anyJogs {
-		jogLine += fmt.Sprintf("F%.3f", j.FeedRate)
-		if c := j.app.g.Command(jogLine); c != nil {
-			j.HaveJogged = true
-			resp := <-c
-			if resp != "ok" {
-				fmt.Fprintf(os.Stderr, "error response to jog command [%s]: %s, ignoring\n", jogLine, resp)
-			}
-		} else {
-			fmt.Fprintf(os.Stderr, "queue full while trying to jog, ignoring\n")
-		}
-	}
-
 }
 
 func (j *JogControl) Incremental(axis string, dir int) {
-	ok := j.app.g.CommandIgnore(fmt.Sprintf("$J=G91%s%.3fF%.3f", axis, float64(dir)*j.Increment, j.FeedRate))
-	if ok {
-		j.HaveJogged = true
+	// cancel pending jog motions, if any
+	j.Cancel()
+
+	// update the target coordinate
+	j.AddIncrement(axis, dir, j.Increment)
+
+	// jog to the new target
+	//j.SendJogCommand(fmt.Sprintf("%s%.3fF%.3f", axis, target, j.FeedRate))
+	j.SingleContinuous(true)
+
+	// resume continuous jogging, if any
+	j.Tick <- struct{}{}
+}
+
+func (j *JogControl) AddIncrement(axis string, dir int, dist float64) float64 {
+	inc := float64(dir) * dist
+	if axis == "X" {
+		j.Target.X += inc
+		return j.Target.X
+	} else if axis == "Y" {
+		j.Target.Y += inc
+		return j.Target.Y
+	} else if axis == "Z" {
+		j.Target.Z += inc
+		return j.Target.Z
+	} else if axis == "A" {
+		j.Target.A += inc
+		return j.Target.A
+	} else {
+		return 0.0
 	}
 }
 
 func (j *JogControl) StartContinuous(axis string, dir int) {
 	j.Cancel()
-	j.SingleContinuous()
+	j.Tick <- struct{}{}
 }
 
 func (j *JogControl) JogTo(x, y float64) {
 	j.Cancel()
-	ok := j.app.g.CommandIgnore(fmt.Sprintf("$J=G90X%.3fY%.3fF%.3f", x, y, j.FeedRate))
-	if ok {
-		j.HaveJogged = true
-	}
+	j.SendJogCommand(fmt.Sprintf("X%.3fY%.3fF%.3f", x, y, j.FeedRate))
 }
 
 func (j *JogControl) Update(newKeyState map[string]JogKeyState) {

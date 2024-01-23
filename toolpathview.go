@@ -39,7 +39,7 @@ func NewToolpathView(app *App) *ToolpathView {
 
 func (tp *ToolpathView) Layout(gtx C) D {
 	tp.path.Update(tp.app.g.Mpos)
-	tp.path.crossHair = tp.app.g.MposExt()
+	tp.path.crossHair = tp.app.g.Mpos
 	tp.path.axes.X = tp.app.g.Wco.X
 	tp.path.axes.Y = tp.app.g.Wco.Y
 

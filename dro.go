@@ -5,7 +5,9 @@ import (
 	"image"
 	"strings"
 
+	"gioui.org/io/pointer"
 	"gioui.org/layout"
+	"gioui.org/op/clip"
 	"gioui.org/text"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
@@ -71,8 +73,31 @@ func (a *App) ShowDROEditor(axis string, initVal float64) {
 }
 
 func (a *App) LayoutDROCoord(gtx C, name string, val float64) D {
+	for _, gtxEvent := range gtx.Events(name) {
+		switch gtxE := gtxEvent.(type) {
+		case pointer.Event:
+			if gtxE.Kind == pointer.Press {
+				if name == "X" {
+					a.ShowDROEditor("X", a.g.Wpos.X)
+				} else if name == "Y" {
+					a.ShowDROEditor("Y", a.g.Wpos.Y)
+				} else if name == "Z" {
+					a.ShowDROEditor("Z", a.g.Wpos.Z)
+				} else if name == "A" {
+					a.ShowDROEditor("A", a.g.Wpos.A)
+				}
+			}
+		}
+	}
+
 	readout := Readout{th: a.th, decimalPlaces: 3, TextSize: material.H4(a.th, "").TextSize, BackgroundColor: grey(0)}
 	dims := readout.Layout(gtx, name, val)
+
+	defer clip.Rect(image.Rectangle{Max: dims.Size}).Push(gtx.Ops).Pop()
+	pointer.InputOp{
+		Kinds: pointer.Press,
+		Tag:   name, // TODO: a better tag?
+	}.Add(gtx.Ops)
 
 	if a.mode == ModeNum && a.numpop != nil && a.numpopType == name {
 		gtx.Constraints.Max.X = dims.Size.X - 50

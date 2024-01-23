@@ -6,7 +6,6 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/text"
 	"gioui.org/widget"
@@ -56,11 +55,7 @@ func (n *NumPop) Layout(gtx C, location image.Point) D {
 	// dim the rest of the screen (XXX: why does Alpha have to be so high?)
 	paint.Fill(gtx.Ops, rgba(0, 0, 0, 230))
 
-	size := gtx.Constraints.Max
-
 	offsetOp := op.Offset(location).Push(gtx.Ops)
-	clipOp := clip.Rect{Max: size}.Push(gtx.Ops)
-	gtx.Constraints.Max = size
 
 	borderColour := grey(255)
 
@@ -91,7 +86,6 @@ func (n *NumPop) Layout(gtx C, location image.Point) D {
 		)
 	})
 
-	clipOp.Pop()
 	offsetOp.Pop()
 
 	op.Defer(gtx.Ops, macro.Stop())

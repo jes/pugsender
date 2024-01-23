@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"image"
 	"strings"
 
 	"gioui.org/layout"
@@ -52,7 +53,14 @@ func (a *App) LayoutDROCoords(gtx C) D {
 	return Panel{Width: 1, Color: grey(128), CornerRadius: 5, Padding: 5, BackgroundColor: grey(32)}.Layout(gtx, func(gtx C) D {
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 			layout.Rigid(func(gtx C) D {
-				return readout.Layout(gtx, "X", a.g.WposExt().X)
+				dims := readout.Layout(gtx, "X", a.g.WposExt().X)
+
+				if a.mode == ModeNum && a.numpop != nil {
+					gtx.Constraints.Max.X = dims.Size.X - 50
+					a.numpop.Layout(gtx, image.Pt(50, dims.Size.Y))
+				}
+
+				return dims
 			}),
 			layout.Rigid(func(gtx C) D {
 				return readout.Layout(gtx, "Y", a.g.WposExt().Y)

@@ -174,11 +174,6 @@ func (a *App) Run() {
 			// draw the application
 			a.Layout(gtx)
 
-			// draw a numeric input popup, if any
-			if a.mode == ModeNum && a.numpop != nil {
-				a.numpop.Layout(gtx)
-			}
-
 			eventArea.Pop()
 
 			e.Frame(gtx.Ops)
@@ -299,7 +294,7 @@ func (a *App) KeyPress(e key.Event) {
 			// cycle-start
 			a.g.CommandRealtime('~')
 		} else if e.Name == "X" {
-			a.numpop = NewNumPop(a, a.g.Wpos.X, image.Pt(100, 100), func(apply bool, val float64) {
+			a.numpop = NewNumPop(a, a.g.Wpos.X, func(apply bool, val float64) {
 				fmt.Printf("apply=%v, val=%f\n", apply, val)
 				p := a.g.Wpos
 				p.X = val

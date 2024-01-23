@@ -8,24 +8,23 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
+	"gioui.org/op/paint"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 )
 
 type NumPop struct {
-	app      *App
-	initVal  float64
-	location image.Point
-	cb       func(bool, float64)
-	editor   *widget.Editor
+	app     *App
+	initVal float64
+	cb      func(bool, float64)
+	editor  *widget.Editor
 }
 
-func NewNumPop(app *App, initVal float64, location image.Point, cb func(bool, float64)) *NumPop {
+func NewNumPop(app *App, initVal float64, cb func(bool, float64)) *NumPop {
 	return &NumPop{
-		app:      app,
-		initVal:  initVal,
-		location: location,
-		cb:       cb,
+		app:     app,
+		initVal: initVal,
+		cb:      cb,
 		editor: &widget.Editor{
 			SingleLine: true,
 			Submit:     true,
@@ -33,7 +32,14 @@ func NewNumPop(app *App, initVal float64, location image.Point, cb func(bool, fl
 	}
 }
 
-func (n *NumPop) Layout(gtx C) D {
+// don't use the returned value in calculating your dimensions unless
+// you want the presence of the NumPop to change your returned dimensions
+func (n *NumPop) Layout(gtx C, location image.Point) D {
+	// XXX: use op.Record and op.Defer to defer the drawing of
+	// the input popup until the end of the frame, so that the
+	// popup is drawn on top of everything else
+	macro := op.Record(gtx.Ops)
+
 	// handle input
 	for _, e := range n.editor.Events() {
 		switch e.(type) {
@@ -45,24 +51,27 @@ func (n *NumPop) Layout(gtx C) D {
 		}
 	}
 
-	size := image.Pt(500, 300)
+	// dim the rest of the screen (XXX: why does Alpha have to be so high?)
+	paint.Fill(gtx.Ops, rgba(0, 0, 0, 230))
 
-	defer op.Offset(n.location).Push(gtx.Ops).Pop()
-	defer clip.Rect{Max: size}.Push(gtx.Ops).Pop()
+	size := gtx.Constraints.Max
+
+	offsetOp := op.Offset(location).Push(gtx.Ops)
+	clipOp := clip.Rect{Max: size}.Push(gtx.Ops)
 	gtx.Constraints.Max = size
 
 	borderColour := grey(255)
 
 	n.editor.Focus()
 
-	return Panel{Width: 1, CornerRadius: 5, Color: grey(128), BackgroundColor: grey(32)}.Layout(gtx, func(gtx C) D {
+	dims := Panel{Width: 1, CornerRadius: 5, Color: grey(128), BackgroundColor: grey(32)}.Layout(gtx, func(gtx C) D {
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 			layout.Rigid(func(gtx C) D {
 				return material.H4(n.app.th, fmt.Sprintf("%.3f", n.initVal)).Layout(gtx)
 			}),
 			layout.Rigid(func(gtx C) D {
 				// TODO: refactor this and the MDI editor into a common input box component
-				return Panel{Margin: 5, Width: 1, CornerRadius: 2, Color: borderColour, Padding: 5}.Layout(gtx, func(gtx C) D {
+				return Panel{Margin: 5, Width: 1, CornerRadius: 2, Color: borderColour, BackgroundColor: grey(0), Padding: 5}.Layout(gtx, func(gtx C) D {
 					ed := material.Editor(n.app.th, n.editor, "")
 					/*TODO: if n.wantDefocus {
 						key.FocusOp{}.Add(gtx.Ops)
@@ -73,4 +82,11 @@ func (n *NumPop) Layout(gtx C) D {
 			}),
 		)
 	})
+
+	clipOp.Pop()
+	offsetOp.Pop()
+
+	op.Defer(gtx.Ops, macro.Stop())
+
+	return dims
 }

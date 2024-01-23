@@ -271,7 +271,9 @@ func (a *App) KeyPress(e key.Event) {
 			a.mdi.editor.Focus()
 			a.PushMode(ModeMDI)
 		}
-	} else if a.mode == ModeJog {
+	}
+
+	if a.mode == ModeJog {
 		// JOG MODE
 		if e.Name == "H" {
 			// feed hold

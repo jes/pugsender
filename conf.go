@@ -41,6 +41,8 @@ func (a *App) ReadConf() {
 
 		if key == "wpos" {
 			a.g.SetWpos(valv4d)
+			a.g.Wpos = valv4d
+			a.g.Wco = a.g.Mpos.Sub(valv4d)
 		} else {
 			fmt.Fprintf(os.Stderr, "%s: unrecognised config key: [%s]\n", filename, key)
 		}

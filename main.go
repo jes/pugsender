@@ -12,6 +12,7 @@ type (
 
 func main() {
 	a := NewApp()
+	a.ReadConf()
 	go a.AutoConnect()
 	go a.Run()
 	app.Main()

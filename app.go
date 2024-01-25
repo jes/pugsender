@@ -5,6 +5,7 @@ import (
 	"image"
 	"os"
 	"strings"
+	"time"
 
 	"gioui.org/app"
 	"gioui.org/font"
@@ -108,6 +109,21 @@ func NewApp() *App {
 func (a *App) Run() {
 	go a.jog.Run()
 
+	// write the current work coordinates to disk once per second
+	// TODO: also write a one-off update:
+	//  - just before exiting?
+	//  - upon disconnect?
+	// TODO: fix the race condition where we WriteConf before ReadConf?
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		for {
+			<-ticker.C
+			if !a.g.Closed {
+				a.WriteConf()
+			}
+		}
+	}()
+
 	var ops op.Ops
 
 	for {
@@ -189,6 +205,7 @@ func (a *App) Run() {
 
 func (a *App) Connect(g *Grbl) {
 	a.g = g
+	a.ReadConf()
 	go func() {
 		for {
 			<-a.g.StatusUpdate
@@ -367,6 +384,7 @@ func chooseFonts(fonts []font.FontFace) []font.FontFace {
 	}
 }
 
+// use this only for WCO changes initiated by the user (i.e. that they might want to undo); otherwise use a.g.SetWpos() directly
 func (a *App) SetWpos(p V4d) {
 	wco := a.g.Wco
 	if a.g.SetWpos(p) {

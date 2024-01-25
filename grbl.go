@@ -190,9 +190,9 @@ func (g *Grbl) Monitor() {
 	// more by asking it to generate and send a lot of position
 	// data."
 	// https://github.com/grbl/grbl/wiki/Interfacing-with-Grbl
-	ticker := time.NewTicker(200 * time.Millisecond)
 	g.RequestStatusUpdate()
 	go func() {
+		ticker := time.NewTicker(200 * time.Millisecond)
 		for {
 			<-ticker.C
 			if !g.RequestStatusUpdate() {
@@ -203,15 +203,15 @@ func (g *Grbl) Monitor() {
 	}()
 
 	// ask for active g-codes every second, until closed
-	ticker2 := time.NewTicker(time.Second)
 	go func() {
+		ticker := time.NewTicker(time.Second)
 		for {
-			<-ticker2.C
+			<-ticker.C
 			if !g.RequestGCodes() {
 				break
 			}
 		}
-		ticker2.Stop()
+		ticker.Stop()
 	}()
 
 	// read from the serial port

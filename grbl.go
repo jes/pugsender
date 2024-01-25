@@ -41,6 +41,7 @@ type Grbl struct {
 	ResponseQueue   []GrblResponse
 	ResponseLock    sync.Mutex
 	GCodes          string
+	Has4thAxis      bool
 }
 
 type GrblResponse struct {
@@ -286,7 +287,7 @@ func (g *Grbl) ParseStatus(status string) {
 		key := keyval[0]
 		keylc := strings.ToLower(key)
 		val := keyval[1]
-		valv4d, _ := ParseV4d(val)
+		valv4d, axes, _ := ParseV4d(val)
 
 		if keylc == "wpos" { // work position
 			givenWpos = true
@@ -296,6 +297,7 @@ func (g *Grbl) ParseStatus(status string) {
 			g.Mpos = valv4d
 		} else if keylc == "wco" { // work coordinate offset
 			g.Wco = valv4d
+			g.Has4thAxis = (axes == 4)
 		} else if keylc == "ov" { // overrides
 			g.FeedOverride = valv4d.X
 			g.RapidOverride = valv4d.X
@@ -383,7 +385,7 @@ func (g *Grbl) MposExt() V4d {
 	return g.Mpos.Add(g.Vel.Mul(dt.Minutes()))
 }
 
-func (g *Grbl) SetWpos(axis string, val float64) bool {
+func (g *Grbl) SetWpos(p V4d) bool {
 	// XXX: uses CommandWait, which can block the main UI thread
 	// because of https://github.com/gnea/grbl/wiki/Grbl-v1.1-Interface#eeprom-issues
 	// we need to wait until a G10 is acknowledged before proceeding
@@ -393,6 +395,10 @@ func (g *Grbl) SetWpos(axis string, val float64) bool {
 		// only allow setting WCO in Idle state
 		return false
 	}
-	ok, _ := g.CommandWait(fmt.Sprintf("G10L20P1%s%.3f", axis, val))
+	line := fmt.Sprintf("G10L20P1X%.3fY%.3fZ%.3f", p.X, p.Y, p.Z)
+	if g.Has4thAxis {
+		line += fmt.Sprintf("A%.3f", p.A)
+	}
+	ok, _ := g.CommandWait(line)
 	return ok
 }

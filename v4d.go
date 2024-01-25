@@ -13,7 +13,8 @@ type V4d struct {
 	A float64
 }
 
-func ParseV4d(coords string) (V4d, error) {
+// return the parsed V4d and the number of fields parsed, or an error
+func ParseV4d(coords string) (V4d, int, error) {
 	parts := strings.Split(coords, ",")
 
 	var v V4d
@@ -23,17 +24,17 @@ func ParseV4d(coords string) (V4d, error) {
 	coord := []*float64{&v.X, &v.Y, &v.Z, &v.A}
 	for i, part := range parts {
 		if i >= len(coord) {
-			break
+			return v, len(coord), nil
 		}
 
 		var err error
 		*coord[i], err = strconv.ParseFloat(part, 64)
 		if err != nil {
-			return V4d{}, err
+			return V4d{}, 0, err
 		}
 	}
 
-	return v, nil
+	return v, len(parts), nil
 }
 
 func (a V4d) Add(b V4d) V4d {

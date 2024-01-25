@@ -68,7 +68,17 @@ func (a *App) LayoutDROCoords(gtx C) D {
 
 func (a *App) ShowDROEditor(axis string, initVal float64) {
 	a.ShowNumPop(axis, initVal, func(val float64) {
-		a.g.SetWpos(axis, val)
+		wpos := a.g.Wpos
+		if axis == "X" {
+			wpos.X = val
+		} else if axis == "Y" {
+			wpos.Y = val
+		} else if axis == "Z" {
+			wpos.Z = val
+		} else if axis == "A" {
+			wpos.A = val
+		}
+		a.SetWpos(wpos)
 	})
 }
 

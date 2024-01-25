@@ -58,6 +58,9 @@ type App struct {
 
 	tp *ToolpathView
 
+	canUndo bool
+	undoWco V4d
+
 	numpop     *NumPop
 	numpopType string
 
@@ -299,7 +302,18 @@ func (a *App) KeyPress(e key.Event) {
 		} else if e.Name == "Y" {
 			a.ShowDROEditor("Y", a.g.Wpos.Y)
 		} else if e.Name == "Z" {
-			a.ShowDROEditor("Z", a.g.Wpos.Z)
+			if e.Modifiers.Contain(key.ModCtrl) {
+				// ctrl-z = undo WCO change
+				// TODO: undo other operations?
+				// TODO: more levels of undo?
+				fmt.Println("try to undo")
+				if a.canUndo {
+					fmt.Println("really try to undo")
+					a.SetWpos(a.g.Mpos.Sub(a.undoWco))
+				}
+			} else {
+				a.ShowDROEditor("Z", a.g.Wpos.Z)
+			}
 		} else if e.Name == "A" {
 			// TODO: only if there is a 4th axis
 			a.ShowDROEditor("A", a.g.Wpos.A)
@@ -350,5 +364,14 @@ func chooseFonts(fonts []font.FontFace) []font.FontFace {
 		return chosen
 	} else {
 		return fonts
+	}
+}
+
+func (a *App) SetWpos(p V4d) {
+	wco := a.g.Wco
+	if a.g.SetWpos(p) {
+		// TODO: popup a message saying they can use Ctrl-Z to undo
+		a.undoWco = wco
+		a.canUndo = true
 	}
 }

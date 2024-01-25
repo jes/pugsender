@@ -105,8 +105,10 @@ func (tp *ToolpathView) LayoutImage(gtx C) D {
 						tp.app.jog.JogTo(xMm, yMm)
 					} else if gtxE.Modifiers.Contain(key.ModShift) {
 						// shift-click = set work offset
-						tp.app.g.SetWpos("X", xMm)
-						tp.app.g.SetWpos("Y", yMm)
+						wpos := tp.app.g.Wpos
+						wpos.X = xMm
+						wpos.Y = yMm
+						tp.app.SetWpos(wpos)
 					}
 				}
 				// TODO: right-click for context menu?

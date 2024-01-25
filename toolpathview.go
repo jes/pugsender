@@ -59,7 +59,7 @@ func (tp *ToolpathView) Layout(gtx C) D {
 	}
 
 	borderColour := rgb(128, 128, 128)
-	return Panel{Margin: 5, Width: 1, CornerRadius: 5, Color: borderColour}.Layout(gtx, func(gtx C) D {
+	return Panel{Margin: layout.UniformInset(5), Width: 1, CornerRadius: 5, Color: borderColour}.Layout(gtx, func(gtx C) D {
 		tp.path.widthPx = gtx.Constraints.Min.X
 		tp.path.heightPx = gtx.Constraints.Min.Y
 		if tp.hovering {

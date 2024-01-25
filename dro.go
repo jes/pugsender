@@ -50,7 +50,7 @@ func (a *App) LayoutDROCoords(gtx C) D {
 		a.w.Invalidate()
 	}
 
-	return Panel{Width: 1, Color: grey(128), CornerRadius: 5, Padding: 5, BackgroundColor: grey(32)}.Layout(gtx, func(gtx C) D {
+	return Panel{Width: 1, Color: grey(128), CornerRadius: 5, Padding: layout.UniformInset(5), BackgroundColor: grey(32)}.Layout(gtx, func(gtx C) D {
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 			layout.Rigid(func(gtx C) D {
 				return a.LayoutDROCoord(gtx, "X", a.g.WposExt().X)

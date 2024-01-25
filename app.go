@@ -234,7 +234,7 @@ func (a *App) Layout(gtx C) D {
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Flexed(1, func(gtx C) D {
 			return a.split1.Layout(gtx, func(gtx C) D {
-				return Panel{Width: 1, Color: grey(128), Margin: 5, Padding: 5, BackgroundColor: grey(16), CornerRadius: 5}.Layout(gtx, func(gtx C) D {
+				return Panel{Width: 1, Color: grey(128), Margin: layout.UniformInset(5), Padding: layout.UniformInset(5), BackgroundColor: grey(16), CornerRadius: 5}.Layout(gtx, func(gtx C) D {
 					return a.LayoutDRO(gtx)
 				})
 

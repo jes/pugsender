@@ -61,7 +61,7 @@ func (n *NumPop) Layout(gtx C, location image.Point) D {
 
 	n.editor.Focus()
 
-	dims := Panel{Width: 1, CornerRadius: 5, Color: grey(128), BackgroundColor: grey(32), Padding: 4}.Layout(gtx, func(gtx C) D {
+	dims := Panel{Width: 1, CornerRadius: 5, Color: grey(128), BackgroundColor: grey(32), Padding: layout.UniformInset(4)}.Layout(gtx, func(gtx C) D {
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 			layout.Rigid(func(gtx C) D {
 				v := n.initVal
@@ -74,7 +74,7 @@ func (n *NumPop) Layout(gtx C, location image.Point) D {
 			}),
 			layout.Rigid(func(gtx C) D {
 				// TODO: refactor this and the MDI editor into a common input box component
-				return Panel{Margin: 5, Width: 1, CornerRadius: 2, Color: borderColour, BackgroundColor: grey(0), Padding: 5}.Layout(gtx, func(gtx C) D {
+				return Panel{Margin: layout.UniformInset(5), Width: 1, CornerRadius: 2, Color: borderColour, BackgroundColor: grey(0), Padding: layout.UniformInset(5)}.Layout(gtx, func(gtx C) D {
 					ed := material.Editor(n.app.th, n.editor, "")
 					/*TODO: if n.wantDefocus {
 						key.FocusOp{}.Add(gtx.Ops)

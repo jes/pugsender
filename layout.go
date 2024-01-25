@@ -19,8 +19,8 @@ type Panel struct {
 	CornerRadius    unit.Dp     // of border
 	Color           color.NRGBA // of border
 	BackgroundColor color.NRGBA
-	Margin          unit.Dp // outside the border
-	Padding         unit.Dp // inside the border
+	Margin          layout.Inset // outside the border
+	Padding         layout.Inset // inside the border
 }
 
 type Label struct {
@@ -86,17 +86,17 @@ func LayoutProgressBar(gtx C, progress float64, th *material.Theme, text string)
 
 func (p Panel) Layout(gtx C, w layout.Widget) D {
 	if p.BackgroundColor.A > 0 {
-		return layout.UniformInset(p.Margin).Layout(gtx, func(gtx C) D {
+		return p.Margin.Layout(gtx, func(gtx C) D {
 			return widget.Border{Width: p.Width, CornerRadius: p.CornerRadius, Color: p.Color}.Layout(gtx, func(gtx C) D {
 				return LayoutColourRR(gtx, p.BackgroundColor, gtx.Metric.Dp(p.CornerRadius), func(gtx C) D {
-					return layout.UniformInset(p.Padding).Layout(gtx, w)
+					return p.Padding.Layout(gtx, w)
 				})
 			})
 		})
 	} else {
-		return layout.UniformInset(p.Margin).Layout(gtx, func(gtx C) D {
+		return p.Margin.Layout(gtx, func(gtx C) D {
 			return widget.Border{Width: p.Width, CornerRadius: p.CornerRadius, Color: p.Color}.Layout(gtx, func(gtx C) D {
-				return layout.UniformInset(p.Padding).Layout(gtx, w)
+				return p.Padding.Layout(gtx, w)
 			})
 		})
 	}
@@ -106,7 +106,7 @@ func (l Label) Layout(gtx C) D {
 	label := material.H5(l.th, l.text)
 	borderColour := grey(128)
 
-	return Panel{Width: 1, CornerRadius: 2, Color: borderColour, Margin: 4, Padding: 4}.Layout(gtx, label.Layout)
+	return Panel{Width: 1, CornerRadius: 2, Color: borderColour, Margin: layout.UniformInset(4), Padding: layout.UniformInset(4)}.Layout(gtx, label.Layout)
 
 }
 
@@ -120,7 +120,7 @@ func (r Readout) Layout(gtx C, name string, value float64) D {
 		layout.Rigid(nameLabel.Layout),
 		layout.Rigid(layout.Spacer{Width: 10}.Layout),
 		layout.Flexed(1, func(gtx C) D {
-			return Panel{Width: 1, Color: grey(128), CornerRadius: 5, BackgroundColor: r.BackgroundColor, Margin: 2}.Layout(gtx, valueLabel.Layout)
+			return Panel{Width: 1, Color: grey(128), CornerRadius: 5, BackgroundColor: r.BackgroundColor, Margin: layout.UniformInset(2)}.Layout(gtx, valueLabel.Layout)
 		}),
 	)
 

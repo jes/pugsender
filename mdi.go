@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"gioui.org/io/key"
+	"gioui.org/layout"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 )
@@ -12,6 +13,7 @@ type MDI struct {
 	app         *App
 	editor      *widget.Editor
 	wantDefocus bool
+	history     []string // TODO: save the history to disk?
 }
 
 func NewMDI(app *App) *MDI {
@@ -34,6 +36,7 @@ func (m *MDI) Layout(gtx C) D {
 	for _, e := range m.editor.Events() {
 		switch e.(type) {
 		case widget.SubmitEvent:
+			m.history = append(m.history, m.editor.Text())
 			m.app.MDIInput(m.editor.Text())
 			m.editor.SetText("")
 		default:
@@ -46,12 +49,20 @@ func (m *MDI) Layout(gtx C) D {
 		borderColour = grey(128)
 	}
 
-	return Panel{Margin: 5, Width: 1, CornerRadius: 2, Color: borderColour, Padding: 5}.Layout(gtx, func(gtx C) D {
-		ed := material.Editor(m.app.th, m.editor, "")
-		if m.wantDefocus {
-			key.FocusOp{}.Add(gtx.Ops)
-			m.wantDefocus = false
-		}
-		return ed.Layout(gtx)
-	})
+	ed := material.Editor(m.app.th, m.editor, "")
+	if m.wantDefocus {
+		key.FocusOp{}.Add(gtx.Ops)
+		m.wantDefocus = false
+	}
+
+	label := material.Label(m.app.th, m.app.th.TextSize, "MDI>")
+
+	return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+		layout.Rigid(func(gtx C) D {
+			return Panel{Margin: layout.Inset{Top: 5, Bottom: 5}, Width: 1, CornerRadius: 2, Padding: layout.Inset{Top: 5, Bottom: 5}}.Layout(gtx, label.Layout)
+		}),
+		layout.Flexed(1, func(gtx C) D {
+			return Panel{Margin: layout.UniformInset(5), Width: 1, CornerRadius: 2, Color: borderColour, Padding: layout.UniformInset(5)}.Layout(gtx, ed.Layout)
+		}),
+	)
 }

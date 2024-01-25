@@ -77,7 +77,6 @@ func (j *JogControl) Run() {
 		if time.Now().Sub(j.LastJog) > gracePeriod {
 			eps := 0.001
 			if math.Abs(j.app.g.Vel.X) < eps {
-				fmt.Printf("targetx = %.3f\n", j.app.g.Wpos.X)
 				j.Target.X = j.app.g.Wpos.X
 			}
 			if math.Abs(j.app.g.Vel.Y) < eps {

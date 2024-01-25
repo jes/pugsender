@@ -11,6 +11,9 @@ import (
 // TODO: is there a sensible config lib that I should be using instead?
 
 func (a *App) WriteConf() {
+	a.confLock.Lock()
+	defer a.confLock.Unlock()
+
 	filename := a.ConfFile()
 	f, err := os.Create(a.ConfFile())
 	if err != nil {
@@ -23,6 +26,9 @@ func (a *App) WriteConf() {
 }
 
 func (a *App) ReadConf() {
+	a.confLock.RLock()
+	defer a.confLock.RUnlock()
+
 	filename := a.ConfFile()
 	f, err := os.Open(a.ConfFile())
 	if err != nil {

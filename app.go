@@ -5,6 +5,7 @@ import (
 	"image"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"gioui.org/app"
@@ -66,6 +67,9 @@ type App struct {
 	numpop     *NumPop
 	numpopType string
 
+	confLock     sync.RWMutex
+	canWriteConf bool
+
 	split Split
 
 	img image.Image
@@ -109,21 +113,6 @@ func NewApp() *App {
 
 func (a *App) Run() {
 	go a.jog.Run()
-
-	// write the current work coordinates to disk once per second
-	// TODO: also write a one-off update:
-	//  - just before exiting?
-	//  - upon disconnect?
-	// TODO: fix the race condition where we WriteConf before ReadConf?
-	go func() {
-		ticker := time.NewTicker(time.Second)
-		for {
-			<-ticker.C
-			if !a.g.Closed {
-				a.WriteConf()
-			}
-		}
-	}()
 
 	var ops op.Ops
 
@@ -199,6 +188,8 @@ func (a *App) Run() {
 
 			e.Frame(gtx.Ops)
 		case system.DestroyEvent:
+			// save work coordinates before exiting
+			a.WriteConf()
 			os.Exit(0)
 		}
 	}
@@ -207,6 +198,19 @@ func (a *App) Run() {
 func (a *App) Connect(g *Grbl) {
 	a.g = g
 	a.ReadConf()
+
+	// write the current work coordinates to disk once per second
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		for {
+			<-ticker.C
+			if !a.g.Closed {
+				a.WriteConf()
+			}
+		}
+	}()
+
+	// receive status updates from grbl
 	go func() {
 		for {
 			<-a.g.StatusUpdate

@@ -70,7 +70,8 @@ type App struct {
 	confLock     sync.RWMutex
 	canWriteConf bool
 
-	split Split
+	split1 Split
+	split2 Split
 
 	img image.Image
 	mdi *MDI
@@ -93,8 +94,10 @@ func NewApp() *App {
 	a.mdi = NewMDI(a)
 	a.jog = NewJogControl(a)
 	a.tp = NewToolpathView(a)
-	a.split.Ratio = -0.5
-	a.split.InvisibleBar = true
+	a.split1.Ratio = -0.5
+	a.split1.InvisibleBar = true
+	a.split2.Ratio = 0
+	a.split2.InvisibleBar = true
 
 	var err error
 	a.img, err = loadImage("pugs.png")
@@ -230,12 +233,17 @@ func (a *App) Connect(g *Grbl) {
 func (a *App) Layout(gtx C) D {
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Flexed(1, func(gtx C) D {
-			return a.split.Layout(gtx, func(gtx C) D {
+			return a.split1.Layout(gtx, func(gtx C) D {
 				return Panel{Width: 1, Color: grey(128), Margin: 5, Padding: 5, BackgroundColor: grey(16), CornerRadius: 5}.Layout(gtx, func(gtx C) D {
 					return a.LayoutDRO(gtx)
 				})
 
-			}, a.tp.Layout)
+			}, func(gtx C) D {
+				return a.split2.Layout(gtx, func(gtx C) D {
+					return layout.Dimensions{Size: gtx.Constraints.Min}
+				},
+					a.tp.Layout)
+			})
 		}),
 		layout.Rigid(a.LayoutMDI),
 		layout.Rigid(a.LayoutStatusBar),

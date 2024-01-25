@@ -47,16 +47,14 @@ func (tp *ToolpathView) Layout(gtx C) D {
 
 	// render the toolpath in a different goroutine so as not to
 	// block the main UI
-	// TODO: this would appear to trigger constant unnecessary redraws, instead
-	// we should get some signal from the Path that says whether or not it
-	// needs re-drawing, and only redraw it if it does
 	if !tp.rendering {
 		tp.rendering = true
 		go func() {
-			tp.path.Render()
-			tp.imageOp = paint.NewImageOp(tp.path.Image)
+			if tp.path.Render() {
+				tp.imageOp = paint.NewImageOp(tp.path.Image)
+				tp.app.w.Invalidate()
+			}
 			tp.rendering = false
-			tp.app.w.Invalidate()
 		}()
 	}
 

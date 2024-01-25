@@ -91,7 +91,7 @@ func (p *Path) Render() bool {
 	p.last = opts
 
 	if !changed {
-		return
+		return false
 	}
 
 	bounds := image.Rect(0, 0, p.widthPx, p.heightPx)
@@ -101,6 +101,8 @@ func (p *Path) Render() bool {
 	draw.Draw(composite, bounds, p.foregroundLayer, image.Point{}, draw.Over)
 
 	p.Image = composite
+
+	return true
 }
 
 func (p *Path) RenderBackground() bool {

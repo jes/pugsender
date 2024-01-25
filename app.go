@@ -240,12 +240,16 @@ func (a *App) Layout(gtx C) D {
 
 			}, func(gtx C) D {
 				return a.split2.Layout(gtx, func(gtx C) D {
-					return layout.Dimensions{Size: gtx.Constraints.Min}
+					return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+						layout.Flexed(1, func(gtx C) D {
+							return D{Size: gtx.Constraints.Min}
+						}),
+						layout.Rigid(a.LayoutMDI),
+					)
 				},
 					a.tp.Layout)
 			})
 		}),
-		layout.Rigid(a.LayoutMDI),
 		layout.Rigid(a.LayoutStatusBar),
 	)
 }

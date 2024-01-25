@@ -9,6 +9,11 @@ import (
 	"github.com/llgcode/draw2d/draw2dimg"
 )
 
+const (
+	MinPxPerMm = 0.1
+	MaxPxPerMm = 10000.0
+)
+
 type PathOpts struct {
 	showAxes      bool
 	showCrossHair bool
@@ -56,7 +61,14 @@ func (p *Path) Update(pos V4d) {
 	p.positions = append(p.positions, pos)
 }
 
-func (p *Path) Render() {
+// return true if redrawn, false if no changes to draw
+func (p *Path) Render() bool {
+	if p.pxPerMm > MaxPxPerMm {
+		p.pxPerMm = MaxPxPerMm
+	}
+	if p.pxPerMm < MinPxPerMm {
+		p.pxPerMm = MinPxPerMm
+	}
 	eps := 0.000001
 	if p.widthPx != p.last.widthPx || p.heightPx != p.last.heightPx || math.Abs(p.pxPerMm-p.last.pxPerMm) > eps || p.centre.Sub(p.last.centre).Length() > eps {
 		p.ForceRedraw = true

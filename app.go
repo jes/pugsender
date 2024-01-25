@@ -20,6 +20,7 @@ import (
 	"gioui.org/text"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
+	"gioui.org/x/explorer"
 )
 
 type Mode int
@@ -178,7 +179,7 @@ func (a *App) Run() {
 			).Push(gtx.Ops)
 
 			keys := []string{
-				"(Ctrl)-+", "(Ctrl)--", "(Shift)-S", "(Shift)-R", "(Shift)-H", "(Shift)-X", "(Shift)-Y", "(Shift)-Z", "(Shift)-A", "(Shift)-G", "(Shift)-M", "(Shift)-J", key.NameEscape, key.NameLeftArrow, key.NameRightArrow, key.NameUpArrow, key.NameDownArrow, key.NamePageUp, key.NamePageDown,
+				"(Ctrl)-+", "(Ctrl)--", "(Shift)-S", "(Shift)-R", "(Shift)-H", "(Shift)-X", "(Shift)-Y", "(Shift)-Z", "(Shift)-A", "(Shift)-G", "(Shift)-M", "(Shift)-J", "(Shift)-O", key.NameEscape, key.NameLeftArrow, key.NameRightArrow, key.NameUpArrow, key.NameDownArrow, key.NamePageUp, key.NamePageDown,
 			}
 			key.InputOp{
 				Keys: key.Set(strings.Join(keys, "|")),
@@ -334,6 +335,18 @@ func (a *App) KeyPress(e key.Event) {
 		} else if e.Name == "A" {
 			// TODO: only if there is a 4th axis
 			a.ShowDROEditor("A", a.g.Wpos.A)
+		} else if e.Name == "O" {
+			// TODO: this is not exactly what I want, because:
+			// - it lets you open multiple file browsers simultaneously
+			// - it doesn't have the nice keyboard-driven tab-completing ui I want
+			go func() {
+				w := app.NewWindow(app.Title("Open G-code file"))
+				e := explorer.NewExplorer(w)
+				_, err := e.ChooseFile(".gcode", ".ngc", ".gc")
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "explorer.ChooseFile(): %v\n", err)
+				}
+			}()
 		}
 	}
 

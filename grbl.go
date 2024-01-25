@@ -156,7 +156,6 @@ func (g *Grbl) Write(p []byte) (n int, err error) {
 	// TODO: is there a race condition where concurrent writes can end up interleaved?
 	// TODO: is there a race condition where we decrease SerialFree, then read a status report that still has the old SerialFree in it,
 	// and then send some more bytes but the buffer is already full?
-	os.Stdout.Write(p)
 	return g.SerialPort.Write(p)
 }
 
@@ -218,7 +217,6 @@ func (g *Grbl) Monitor() {
 	scanner := bufio.NewScanner(g.SerialPort)
 	for scanner.Scan() {
 		line := scanner.Text()
-		fmt.Println(scanner.Text())
 		if strings.HasPrefix(line, "<") && strings.HasSuffix(line, ">") {
 			// status update
 			g.ParseStatus(line)
@@ -356,7 +354,6 @@ func (g *Grbl) ParseGCodes(line string) {
 }
 
 func (g *Grbl) SendResponse(line string) {
-
 	l := len(g.ResponseQueue)
 	if l == 0 {
 		fmt.Fprintf(os.Stderr, "BUG: wanted to send a command response, but no channels are waiting; this means the sender is out of sync\n")
@@ -367,6 +364,10 @@ func (g *Grbl) SendResponse(line string) {
 	r := g.ResponseQueue[0]
 	g.ResponseQueue = g.ResponseQueue[1:]
 	g.ResponseLock.Unlock()
+
+	if strings.HasPrefix(line, "error") {
+		fmt.Printf("[%s]: %s\n", r.command, line)
+	}
 
 	g.SerialFree += len(r.command)
 	r.responseChan <- line

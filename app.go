@@ -268,7 +268,7 @@ func (a *App) LayoutMDI(gtx C) D {
 func (a *App) MDIInput(line string) {
 	a.g.CommandIgnore(line)
 	fmt.Printf(" > [%s]\n", line)
-	if a.mode == ModeMDI {
+	if a.mode == ModeMDI && a.mdi.defocusOnSubmit {
 		a.mdi.Defocus()
 		a.PopMode()
 	}
@@ -316,6 +316,7 @@ func (a *App) KeyPress(e key.Event) {
 				a.mdi.editor.SetCaret(1, 1)
 			}
 			a.mdi.editor.Focus()
+			a.mdi.defocusOnSubmit = true
 			a.PushMode(ModeMDI)
 		}
 	}

@@ -15,7 +15,7 @@ don't attempt jogging while mode is not "idle" or "jog"?
 unlock an alarm
 show grbl's messages to user (alarm/error/other message)
 overrides
-MDI history
+MDI history search
 make the MDI all caps, automatically insert spaces between a number and a following letter (so "G0x0y0" becomes "G0 X0 Y0")
 show planned movements (and hide them again if sending is cancelled?)
 reset toolpath view
@@ -24,3 +24,4 @@ don't draw lines on toolpath view when changing work offset
 zoom toolpath view to fit content
 prevent submitting the MDI if there is nothing to submit to? (e.g. disconnected)
 fix keyboard jog
+make the MDI detect all arrow key events (why are some suppressed?)

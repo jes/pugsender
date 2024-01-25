@@ -10,10 +10,14 @@ import (
 )
 
 type MDI struct {
-	app         *App
-	editor      *widget.Editor
-	wantDefocus bool
-	history     []string // TODO: save the history to disk?
+	app    *App
+	editor *widget.Editor
+
+	wantDefocus     bool
+	defocusOnSubmit bool
+
+	history      []string // TODO: save the history to disk?
+	historyIndex int
 }
 
 func NewMDI(app *App) *MDI {
@@ -27,8 +31,10 @@ func NewMDI(app *App) *MDI {
 }
 
 func (m *MDI) Defocus() {
+	m.defocusOnSubmit = false
 	m.wantDefocus = true
 	m.app.w.Invalidate()
+	m.historyIndex = len(m.history)
 }
 
 func (m *MDI) Layout(gtx C) D {
@@ -42,6 +48,42 @@ func (m *MDI) Layout(gtx C) D {
 		default:
 			fmt.Printf("[unhandled MDI event] %#v\n", e)
 		}
+	}
+
+	if m.editor.Focused() {
+		// handle arrow keys
+		for _, gtxEvent := range gtx.Events(m) {
+			switch gtxE := gtxEvent.(type) {
+			case key.Event:
+				if gtxE.State == key.Press {
+					if gtxE.Name == key.NameUpArrow {
+						if m.historyIndex > 0 {
+							m.historyIndex -= 1
+						}
+					} else if gtxE.Name == key.NameDownArrow {
+						if m.historyIndex < len(m.history) {
+							m.historyIndex += 1
+						}
+					}
+
+					fmt.Printf("idx=%d\n", m.historyIndex)
+
+					// if we've scrolled to a valid history point, set text
+					if m.historyIndex >= 0 && m.historyIndex < len(m.history) {
+						m.editor.SetText(m.history[m.historyIndex])
+						m.defocusOnSubmit = false
+					} else {
+						// TODO: if we scroll all the way down (m.historyIndex == len(m.history)) then restore whatever was in the input before scrolling began
+						m.editor.SetText("")
+					}
+				}
+			}
+		}
+
+		key.InputOp{
+			Keys: key.Set(key.NameUpArrow + "|" + key.NameDownArrow),
+			Tag:  m,
+		}.Add(gtx.Ops)
 	}
 
 	borderColour := grey(255)

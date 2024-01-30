@@ -66,14 +66,11 @@ func (j *JogControl) Cancel() {
 func (j *JogControl) Run() {
 	ticker := time.NewTicker(j.TickerPeriod)
 	for {
-		select {
-		case <-ticker.C:
-		case <-j.Tick:
-		}
+		<-ticker.C
 
 		// if no jogs have been sent in the last "gracePeriod",
 		// reset the target for any axis that is not moving
-		gracePeriod := 2000 * time.Millisecond
+		gracePeriod := 200 * time.Millisecond
 		if time.Now().Sub(j.LastJog) > gracePeriod {
 			eps := 0.001
 			if math.Abs(j.app.g.Vel.X) < eps {
@@ -90,9 +87,7 @@ func (j *JogControl) Run() {
 			}
 		}
 
-		j.keyHeldLock.RLock()
 		j.SingleContinuous(false)
-		j.keyHeldLock.RUnlock()
 	}
 }
 
@@ -108,12 +103,15 @@ func (j *JogControl) SendJogCommand(line string) bool {
 		j.HaveJogged = true
 		return true
 	} else {
-		fmt.Fprintf(os.Stderr, "BUG?? error while trying to jog, ignoring\n")
+		fmt.Fprintf(os.Stderr, "BUG?? error [%s] while trying to jog, ignoring\n", line)
 		return false
 	}
 }
 
 func (j *JogControl) SingleContinuous(force bool) {
+	j.keyHeldLock.RLock()
+	defer j.keyHeldLock.RUnlock()
+
 	jogDist := j.FeedRate * j.TickerPeriod.Minutes()
 
 	anyJogs := false
@@ -131,21 +129,6 @@ func (j *JogControl) SingleContinuous(force bool) {
 		// TODO: support 4th axis jogging?
 		j.SendJogCommand(fmt.Sprintf("X%.3fY%.3fZ%.3fF%.3f", j.Target.X, j.Target.Y, j.Target.Z, j.FeedRate))
 	}
-}
-
-func (j *JogControl) Incremental(axis string, dir int) {
-	// cancel pending jog motions, if any
-	j.Cancel()
-
-	// update the target coordinate
-	j.AddIncrement(axis, dir, j.Increment)
-
-	// jog to the new target
-	//j.SendJogCommand(fmt.Sprintf("%s%.3fF%.3f", axis, target, j.FeedRate))
-	j.SingleContinuous(true)
-
-	// resume continuous jogging, if any
-	j.Tick <- struct{}{}
 }
 
 func (j *JogControl) AddIncrement(axis string, dir int, dist float64) float64 {
@@ -167,11 +150,6 @@ func (j *JogControl) AddIncrement(axis string, dir int, dist float64) float64 {
 	}
 }
 
-func (j *JogControl) StartContinuous(axis string, dir int) {
-	j.Cancel()
-	j.Tick <- struct{}{}
-}
-
 func (j *JogControl) JogTo(x, y float64) {
 	j.Cancel()
 	j.SendJogCommand(fmt.Sprintf("X%.3fY%.3fF%.3f", x, y, j.FeedRate))
@@ -179,8 +157,10 @@ func (j *JogControl) JogTo(x, y float64) {
 
 func (j *JogControl) Update(newKeyState map[string]JogKeyState) {
 	j.keyHeldLock.Lock()
-	defer j.keyHeldLock.Unlock()
 
+	needCancel := false
+	needMove := false
+	forceMove := false
 	for k, state := range newKeyState {
 		isJogAction, axis, dir := JogAction(k)
 		if !isJogAction {
@@ -189,20 +169,30 @@ func (j *JogControl) Update(newKeyState map[string]JogKeyState) {
 
 		if state == JogKeyPress {
 			j.keyHeld[k] = false
-			j.Incremental(axis, dir)
+			j.AddIncrement(axis, dir, j.Increment)
+			needMove = true
+			forceMove = true
 		} else if state == JogKeyRelease {
 			if j.KeyHeld(k) {
 				j.keyHeld[k] = false
-				j.Cancel()
-				// TODO: resume jogs for held keys
-				// TODO: if we were part way through an incomplete incremental jog, recreate the incremental jog
+				needCancel = true
+				// TODO: if there are still other keys held, this doesn't cancel very effectively, what to do?
 			}
 		} else if state == JogKeyHold {
 			if !j.KeyHeld(k) {
 				j.keyHeld[k] = true
-				j.StartContinuous(axis, dir)
+				needMove = true
 			}
 		}
+	}
+
+	j.keyHeldLock.Unlock()
+
+	if needMove {
+		j.Cancel()
+		j.SingleContinuous(forceMove)
+	} else if needCancel {
+		j.Cancel()
 	}
 }
 

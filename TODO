@@ -16,6 +16,7 @@ unlock an alarm
 show grbl's messages to user (alarm/error/other message)
 overrides
 MDI history search
+MDI history view
 make the MDI all caps, automatically insert spaces between a number and a following letter (so "G0x0y0" becomes "G0 X0 Y0")
 show planned movements (and hide them again if sending is cancelled?)
 reset toolpath view
@@ -26,3 +27,5 @@ prevent submitting the MDI if there is nothing to submit to? (e.g. disconnected)
 fix keyboard jog
 make the MDI detect all arrow key events (why are some suppressed?)
 some sort of "processing" indicator while rendering toolpaths, loading gcode, etc.
+make keyboard shortcuts more sensible
+draw loaded g-code on toolpath view

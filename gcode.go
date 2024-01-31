@@ -20,7 +20,9 @@ func (a *App) LoadGcode(r io.Reader) {
 	a.nextLine = 0
 }
 
-func (a *App) RunGcode() {
+func (a *App) CycleStart() {
+	a.g.CommandRealtime('~')
+
 	if a.runningGcode {
 		return
 	}
@@ -46,6 +48,11 @@ func (a *App) RunGcode() {
 	}()
 }
 
-func (a *App) StopGcode() {
+func (a *App) SoftReset() {
 	a.wantToRunGcode = false
+	a.g.CommandRealtime(0x18)
+}
+
+func (a *App) FeedHold() {
+	a.g.CommandRealtime('!')
 }

@@ -329,16 +329,11 @@ func (a *App) KeyPress(e key.Event) {
 	if a.mode == ModeJog {
 		// JOG MODE
 		if e.Name == "H" {
-			// feed hold
-			a.g.CommandRealtime('!')
+			a.FeedHold()
 		} else if e.Name == "R" {
-			// soft-reset
-			a.g.CommandRealtime(0x18)
-			a.StopGcode()
+			a.SoftReset()
 		} else if e.Name == "S" {
-			// cycle-start
-			a.g.CommandRealtime('~')
-			a.RunGcode()
+			a.CycleStart()
 		} else if e.Name == "X" {
 			a.ShowDROEditor("X", a.g.Wpos.X)
 		} else if e.Name == "Y" {

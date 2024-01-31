@@ -29,3 +29,4 @@ make the MDI detect all arrow key events (why are some suppressed?)
 some sort of "processing" indicator while rendering toolpaths, loading gcode, etc.
 make keyboard shortcuts more sensible
 draw loaded g-code on toolpath view
+fix deadlocks

@@ -247,7 +247,7 @@ func (a *App) Layout(gtx C) D {
 				return a.split2.Layout(gtx, func(gtx C) D {
 					return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 						layout.Flexed(1, func(gtx C) D {
-							return D{Size: gtx.Constraints.Min}
+							return a.LayoutGcode(gtx)
 						}),
 						layout.Rigid(a.LayoutMDI),
 					)

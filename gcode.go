@@ -35,6 +35,10 @@ func (a *App) CycleStart() {
 			a.nextLine += 1
 
 			fmt.Printf("> [%s]\n", line)
+			// TODO: use the character-counting method instead of waiting for a response
+			// TODO: do we need to do something else to make `a.wantToRunGcode`
+			// able to interrupt this? we wouldn't want to reset nextLine to 0
+			// after a 2nd instance starts running
 			a.g.CommandWait(line)
 
 			// TODO: stop requesting G codes after every command (but

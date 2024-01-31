@@ -33,18 +33,23 @@ type Path struct {
 	positions      []V4d
 	drawnPositions int
 
+	gcodePositions  []V4d
+	needGCodeRedraw bool
+
 	ForceRedraw bool
 
 	Image           image.Image
 	backgroundLayer *image.RGBA
 	toolpathLayer   *image.RGBA
+	gcodeLayer      *image.RGBA
 	foregroundLayer *image.RGBA
 }
 
 func NewPath() *Path {
 	return &Path{
-		PathOpts:    PathOpts{pxPerMm: 10},
-		ForceRedraw: true,
+		PathOpts:        PathOpts{pxPerMm: 10},
+		needGCodeRedraw: true,
+		ForceRedraw:     true,
 	}
 }
 
@@ -59,6 +64,11 @@ func (p *Path) Update(pos V4d) {
 		return
 	}
 	p.positions = append(p.positions, pos)
+}
+
+func (p *Path) SetGCode(positions []V4d) {
+	p.gcodePositions = positions
+	p.needGCodeRedraw = true
 }
 
 // return true if redrawn, false if no changes to draw
@@ -80,6 +90,9 @@ func (p *Path) Render() bool {
 	if p.RenderBackground() {
 		changed = true
 	}
+	if p.RenderGCode() {
+		changed = true
+	}
 	if p.RenderToolpath() {
 		changed = true
 	}
@@ -97,6 +110,7 @@ func (p *Path) Render() bool {
 	bounds := image.Rect(0, 0, p.widthPx, p.heightPx)
 	composite := image.NewRGBA(bounds)
 	draw.Draw(composite, bounds, p.backgroundLayer, image.Point{}, draw.Src)
+	draw.Draw(composite, bounds, p.gcodeLayer, image.Point{}, draw.Over)
 	draw.Draw(composite, bounds, p.toolpathLayer, image.Point{}, draw.Over)
 	draw.Draw(composite, bounds, p.foregroundLayer, image.Point{}, draw.Over)
 
@@ -143,6 +157,31 @@ func (p *Path) RenderBackground() bool {
 	return true
 }
 
+func (p *Path) RenderGCode() bool {
+	l := len(p.gcodePositions)
+	if !p.ForceRedraw && !p.needGCodeRedraw {
+		// no need to re-render
+		return false
+	}
+
+	p.gcodeLayer = image.NewRGBA(image.Rect(0, 0, p.widthPx, p.heightPx))
+	gc := draw2dimg.NewGraphicContext(p.gcodeLayer)
+
+	// TODO: deduplicate with `RenderToolpath()`
+	if l > 0 {
+		gc.SetStrokeColor(color.White)
+		gc.MoveTo(p.MmToPx(p.gcodePositions[0].X, p.gcodePositions[0].Y))
+		for _, pos := range p.gcodePositions {
+			gc.LineTo(p.MmToPx(pos.X, pos.Y))
+		}
+		gc.Stroke()
+	}
+
+	p.needGCodeRedraw = false
+	return true
+
+}
+
 func (p *Path) RenderToolpath() bool {
 	l := len(p.positions)
 	if !p.ForceRedraw &&
@@ -158,8 +197,9 @@ func (p *Path) RenderToolpath() bool {
 	}
 	gc := draw2dimg.NewGraphicContext(p.toolpathLayer)
 
+	// TODO: deduplicate with `RenderGCode()`
 	if l > 0 {
-		gc.SetStrokeColor(color.White)
+		gc.SetStrokeColor(grey(128))
 		gc.MoveTo(p.MmToPx(p.positions[startIdx].X, p.positions[startIdx].Y))
 		for _, pos := range p.positions[startIdx+1:] {
 			gc.LineTo(p.MmToPx(pos.X, pos.Y))

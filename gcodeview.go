@@ -9,7 +9,7 @@ import (
 var list *widget.List
 var scrolledTo int
 
-func (a *App) LayoutGcode(gtx C) D {
+func (a *App) LayoutGCode(gtx C) D {
 	if list == nil {
 		var l widget.List
 		l.Axis = layout.Vertical
@@ -31,6 +31,8 @@ func (a *App) LayoutGcode(gtx C) D {
 			// * waiting in planner buffer
 			// * currently executing
 			// * completed
+			// TODO: context menu:
+			// * run from line
 			if i < a.nextLine {
 				return LayoutColour(gtx, grey(32), material.Body1(a.th, a.gcode[i]).Layout)
 			} else {

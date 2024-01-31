@@ -75,8 +75,8 @@ type App struct {
 
 	gcode          []string
 	nextLine       int
-	runningGcode   bool
-	wantToRunGcode bool
+	runningGCode   bool
+	wantToRunGCode bool
 
 	img image.Image
 	mdi *MDI
@@ -247,7 +247,7 @@ func (a *App) Layout(gtx C) D {
 				return a.split2.Layout(gtx, func(gtx C) D {
 					return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 						layout.Flexed(1, func(gtx C) D {
-							return a.LayoutGcode(gtx)
+							return a.LayoutGCode(gtx)
 						}),
 						layout.Rigid(a.LayoutMDI),
 					)
@@ -363,7 +363,7 @@ func (a *App) KeyPress(e key.Event) {
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "explorer.ChooseFile(): %v\n", err)
 				} else {
-					a.LoadGcode(f)
+					a.LoadGCode(f)
 				}
 			}()
 		}

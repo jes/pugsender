@@ -30,3 +30,4 @@ some sort of "processing" indicator while rendering toolpaths, loading gcode, et
 make keyboard shortcuts more sensible
 draw loaded g-code on toolpath view
 fix deadlocks
+"run from line" on gcode view

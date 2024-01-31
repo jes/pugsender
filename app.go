@@ -73,6 +73,9 @@ type App struct {
 	split1 Split
 	split2 Split
 
+	gcode    []string
+	nextLine int
+
 	img image.Image
 	mdi *MDI
 }
@@ -171,7 +174,7 @@ func (a *App) Run() {
 			).Push(gtx.Ops)
 
 			keys := []string{
-				"(Ctrl)-+", "(Ctrl)--", "(Shift)-S", "(Shift)-R", "(Shift)-H", "(Shift)-X", "(Shift)-Y", "(Shift)-Z", "(Shift)-A", "(Shift)-G", "(Shift)-M", "(Shift)-J", "(Shift)-O", key.NameEscape, key.NameLeftArrow, key.NameRightArrow, key.NameUpArrow, key.NameDownArrow, key.NamePageUp, key.NamePageDown,
+				"(Ctrl)-+", "(Ctrl)--", "(Shift)-S", "(Shift)-R", "(Shift)-U", "(Shift)-H", "(Shift)-X", "(Shift)-Y", "(Shift)-Z", "(Shift)-A", "(Shift)-G", "(Shift)-M", "(Shift)-J", "(Shift)-O", key.NameEscape, key.NameLeftArrow, key.NameRightArrow, key.NameUpArrow, key.NameDownArrow, key.NamePageUp, key.NamePageDown,
 			}
 			key.InputOp{
 				Keys: key.Set(strings.Join(keys, "|")),
@@ -341,9 +344,7 @@ func (a *App) KeyPress(e key.Event) {
 				// ctrl-z = undo WCO change
 				// TODO: undo other operations?
 				// TODO: more levels of undo?
-				fmt.Println("try to undo")
 				if a.canUndo {
-					fmt.Println("really try to undo")
 					a.SetWpos(a.g.Mpos.Sub(a.undoWco))
 				}
 			} else {
@@ -359,11 +360,15 @@ func (a *App) KeyPress(e key.Event) {
 			go func() {
 				w := app.NewWindow(app.Title("Open G-code file"))
 				e := explorer.NewExplorer(w)
-				_, err := e.ChooseFile(".gcode", ".ngc", ".gc")
+				f, err := e.ChooseFile() // TODO: filtering by ".gcode" file extension doesn't seem to work properly? hides some files even if they have the correct extension
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "explorer.ChooseFile(): %v\n", err)
+				} else {
+					a.LoadGcode(f)
 				}
 			}()
+		} else if e.Name == "U" {
+			a.RunGcode()
 		}
 	}
 

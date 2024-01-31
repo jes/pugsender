@@ -177,6 +177,9 @@ func (j *JogControl) Update(newKeyState map[string]JogKeyState) {
 				j.keyHeld[k] = false
 				needCancel = true
 				// TODO: if there are still other keys held, this doesn't cancel very effectively, what to do?
+				// 1. cancel all continuous jogs and make them re-press to start the others?
+				// 2. set the cancelled axis's jog target to the current Wpos? may cause it to reverse after it stops
+				// 3. set the cancelled axis's jog target to the current Wpos, but continue to update it to the new Wpos every update until it stops?
 			}
 		} else if state == JogKeyHold {
 			if !j.KeyHeld(k) {

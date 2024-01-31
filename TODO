@@ -25,3 +25,4 @@ zoom toolpath view to fit content
 prevent submitting the MDI if there is nothing to submit to? (e.g. disconnected)
 fix keyboard jog
 make the MDI detect all arrow key events (why are some suppressed?)
+some sort of "processing" indicator while rendering toolpaths, loading gcode, etc.

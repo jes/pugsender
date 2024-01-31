@@ -73,8 +73,9 @@ type App struct {
 	split1 Split
 	split2 Split
 
-	gcode    []string
-	nextLine int
+	gcode        []string
+	nextLine     int
+	runningGcode bool
 
 	img image.Image
 	mdi *MDI

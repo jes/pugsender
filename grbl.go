@@ -11,37 +11,38 @@ import (
 )
 
 type Grbl struct {
-	SerialPort      io.ReadWriteCloser
-	PortName        string
-	Ready           bool
-	Closed          bool
-	Status          string
-	Wco             V4d
-	Mpos            V4d
-	Wpos            V4d
-	Dtg             V4d // TODO: how can we calculate this?
-	Vel             V4d
-	PlannerSize     int
-	PlannerFree     int
-	SerialSize      int
-	SerialFree      int
-	SpindleCw       bool
-	SpindleCcw      bool
-	FloodCoolant    bool
-	MistCoolant     bool
-	FeedOverride    float64
-	RapidOverride   float64
-	SpindleOverride float64
-	FeedRate        float64
-	SpindleSpeed    float64
-	Pn              string
-	Probe           bool
-	StatusUpdate    chan struct{}
-	UpdateTime      time.Time
-	ResponseQueue   []GrblResponse
-	ResponseLock    sync.Mutex
-	GCodes          string
-	Has4thAxis      bool
+	SerialPort       io.ReadWriteCloser
+	PortName         string
+	Ready            bool
+	Closed           bool
+	Status           string
+	Wco              V4d
+	Mpos             V4d
+	Wpos             V4d
+	Dtg              V4d // TODO: how can we calculate this?
+	Vel              V4d
+	PlannerSize      int
+	PlannerFree      int
+	SerialSize       int
+	SerialFree       int
+	SpindleCw        bool
+	SpindleCcw       bool
+	FloodCoolant     bool
+	MistCoolant      bool
+	FeedOverride     float64
+	RapidOverride    float64
+	SpindleOverride  float64
+	FeedRate         float64
+	SpindleSpeed     float64
+	Pn               string
+	Probe            bool
+	StatusUpdate     chan struct{}
+	UpdateTime       time.Time
+	ResponseQueue    []GrblResponse
+	ResponseLock     sync.Mutex
+	GCodes           string
+	WaitingForGCodes bool
+	Has4thAxis       bool
 }
 
 type GrblResponse struct {
@@ -243,6 +244,11 @@ func (g *Grbl) RequestGCodes() bool {
 	if !g.Ready {
 		return true
 	}
+	if g.WaitingForGCodes {
+		// don't have more than one request in-flight at any time
+		return true
+	}
+	g.WaitingForGCodes = true
 	// TODO: also request gcodes whenever we think they might have changed?
 	ok := g.CommandIgnore("$G")
 	if !ok && g.Closed {
@@ -351,6 +357,7 @@ func (g *Grbl) ParseStatus(status string) {
 
 func (g *Grbl) ParseGCodes(line string) {
 	g.GCodes = strings.TrimRight(strings.TrimPrefix(line, "[GC:"), "]")
+	g.WaitingForGCodes = false
 }
 
 func (g *Grbl) SendResponse(line string) {

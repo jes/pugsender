@@ -24,11 +24,11 @@ func (a *App) RunGcode() {
 	if a.runningGcode {
 		return
 	}
+	a.wantToRunGcode = true
 	a.runningGcode = true
 
-	// TODO: pause/resume, stop, etc.
 	go func() {
-		for a.runningGcode && a.nextLine < len(a.gcode) {
+		for a.wantToRunGcode && a.nextLine < len(a.gcode) {
 			line := a.gcode[a.nextLine]
 			a.nextLine += 1
 
@@ -44,4 +44,8 @@ func (a *App) RunGcode() {
 		a.nextLine = 0
 		a.runningGcode = false
 	}()
+}
+
+func (a *App) StopGcode() {
+	a.wantToRunGcode = false
 }

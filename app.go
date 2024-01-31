@@ -73,9 +73,10 @@ type App struct {
 	split1 Split
 	split2 Split
 
-	gcode        []string
-	nextLine     int
-	runningGcode bool
+	gcode          []string
+	nextLine       int
+	runningGcode   bool
+	wantToRunGcode bool
 
 	img image.Image
 	mdi *MDI
@@ -175,7 +176,7 @@ func (a *App) Run() {
 			).Push(gtx.Ops)
 
 			keys := []string{
-				"(Ctrl)-+", "(Ctrl)--", "(Shift)-S", "(Shift)-R", "(Shift)-U", "(Shift)-H", "(Shift)-X", "(Shift)-Y", "(Shift)-Z", "(Shift)-A", "(Shift)-G", "(Shift)-M", "(Shift)-J", "(Shift)-O", key.NameEscape, key.NameLeftArrow, key.NameRightArrow, key.NameUpArrow, key.NameDownArrow, key.NamePageUp, key.NamePageDown,
+				"(Ctrl)-+", "(Ctrl)--", "(Shift)-S", "(Shift)-R", "(Shift)-H", "(Shift)-X", "(Shift)-Y", "(Shift)-Z", "(Shift)-A", "(Shift)-G", "(Shift)-M", "(Shift)-J", "(Shift)-O", key.NameEscape, key.NameLeftArrow, key.NameRightArrow, key.NameUpArrow, key.NameDownArrow, key.NamePageUp, key.NamePageDown,
 			}
 			key.InputOp{
 				Keys: key.Set(strings.Join(keys, "|")),
@@ -333,9 +334,11 @@ func (a *App) KeyPress(e key.Event) {
 		} else if e.Name == "R" {
 			// soft-reset
 			a.g.CommandRealtime(0x18)
+			a.StopGcode()
 		} else if e.Name == "S" {
 			// cycle-start
 			a.g.CommandRealtime('~')
+			a.RunGcode()
 		} else if e.Name == "X" {
 			a.ShowDROEditor("X", a.g.Wpos.X)
 		} else if e.Name == "Y" {
@@ -368,8 +371,6 @@ func (a *App) KeyPress(e key.Event) {
 					a.LoadGcode(f)
 				}
 			}()
-		} else if e.Name == "U" {
-			a.RunGcode()
 		}
 	}
 

@@ -1,13 +1,11 @@
 allow disabling autoconnect
 allow connecting to manually-typed serial port
-allow opening g-code
 efficient file browser
 allow setting jog increment & feed rate
 show key shortcuts & mouse operations
 "follow outline" of gcode file
 better ui for pause/resume etc.
 raw serial console
-MDI history
 sync/async grbl based on what is typed into MDI (or only allow actual synchronous gcode in MDI? but what about raw console?)
 mouse interface
 better indication of auto-connector behaviour (specifically, when it doesn't connect: why? and what did it try?)
@@ -18,7 +16,6 @@ overrides
 MDI history search
 MDI history view
 make the MDI all caps, automatically insert spaces between a number and a following letter (so "G0x0y0" becomes "G0 X0 Y0")
-show planned movements (and hide them again if sending is cancelled?)
 reset toolpath view
 save settings to file
 don't draw lines on toolpath view when changing work offset
@@ -28,6 +25,6 @@ fix keyboard jog
 make the MDI detect all arrow key events (why are some suppressed?)
 some sort of "processing" indicator while rendering toolpaths, loading gcode, etc.
 make keyboard shortcuts more sensible
-draw loaded g-code on toolpath view
 fix deadlocks
 "run from line" on gcode view
+fix WCO of gcode drawn on toolpath view

@@ -2,7 +2,6 @@
 
  * "follow outline" of gcode file
  * better ui for pause/resume etc.
- * unlock an alarm
  * show grbl's messages to user (alarm/error/other message)
  * overrides
  * fix keyboard jog

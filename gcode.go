@@ -73,6 +73,10 @@ func (a *App) FeedHold() {
 	a.g.CommandRealtime('!')
 }
 
+func (a *App) AlarmUnlock() {
+	a.g.CommandIgnore("$X")
+}
+
 func GCodeToPath(lines []string) []V4d {
 	pos := V4d{}
 

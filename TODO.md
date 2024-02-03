@@ -38,3 +38,5 @@
  * correctly handle the distinction between pixels, Dp, Sp, etc.?
  * don't draw an initial movement from (0,0,0) to the start point of the g-code
  * when window is full-screen, file selector should be visible, instead of opened "behind" the application
+ * show gcode filename in status bar
+ * make the user confirm if they try to close while program is running

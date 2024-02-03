@@ -373,35 +373,6 @@ func (a *App) KeyPress(e key.Event) {
 			a.mdi.editor.Focus()
 			a.mdi.defocusOnSubmit = true
 			a.PushMode(ModeMDI)
-		}
-	}
-
-	if a.mode == ModeJog {
-		// JOG MODE
-		if e.Name == "H" {
-			a.FeedHold()
-		} else if e.Name == "R" {
-			a.SoftReset()
-		} else if e.Name == "S" {
-			a.CycleStart()
-		} else if e.Name == "X" {
-			a.xDro.ShowEditor()
-		} else if e.Name == "Y" {
-			a.yDro.ShowEditor()
-		} else if e.Name == "Z" {
-			if e.Modifiers.Contain(key.ModCtrl) {
-				// ctrl-z = undo WCO change
-				// TODO: undo other operations?
-				// TODO: more levels of undo?
-				if a.canUndo {
-					a.SetWpos(a.g.Mpos.Sub(a.undoWco))
-				}
-			} else {
-				a.zDro.ShowEditor()
-			}
-		} else if e.Name == "A" {
-			// TODO: only if there is a 4th axis
-			a.aDro.ShowEditor()
 		} else if e.Name == "O" {
 			// TODO: this is not exactly what I want, because:
 			// - it lets you open multiple file browsers simultaneously
@@ -423,11 +394,46 @@ func (a *App) KeyPress(e key.Event) {
 		}
 	}
 
+	if a.mode == ModeJog || a.mode == ModeRun {
+		if e.Name == "H" {
+			a.FeedHold()
+		} else if e.Name == "R" {
+			a.SoftReset()
+		} else if e.Name == "S" {
+			a.CycleStart()
+		}
+	}
+
+	if a.mode == ModeJog {
+		// JOG MODE
+		if e.Name == "X" {
+			a.xDro.ShowEditor()
+		} else if e.Name == "Y" {
+			a.yDro.ShowEditor()
+		} else if e.Name == "Z" {
+			if e.Modifiers.Contain(key.ModCtrl) {
+				// ctrl-z = undo WCO change
+				// TODO: undo other operations?
+				// TODO: more levels of undo?
+				if a.canUndo {
+					a.SetWpos(a.g.Mpos.Sub(a.undoWco))
+				}
+			} else {
+				a.zDro.ShowEditor()
+			}
+		} else if e.Name == "A" {
+			// TODO: only if there is a 4th axis
+			a.aDro.ShowEditor()
+		}
+	}
+
 	if e.Name == key.NameEscape {
 		if a.mode == ModeMDI {
 			a.mdi.Defocus()
 		}
-		a.PopMode()
+		if a.mode != ModeRun {
+			a.PopMode()
+		}
 	} else if e.Name == "+" && e.Modifiers.Contain(key.ModCtrl) {
 		a.th.TextSize *= 1.1
 	} else if e.Name == "-" && e.Modifiers.Contain(key.ModCtrl) {

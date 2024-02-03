@@ -35,6 +35,8 @@ func (a *App) CycleStart() {
 	a.wantToRunGCode = true
 	a.runningGCode = true
 
+	a.PushMode(ModeRun)
+
 	go func() {
 		for a.wantToRunGCode && a.nextLine < len(a.gcode) {
 			line := a.gcode[a.nextLine]
@@ -55,6 +57,10 @@ func (a *App) CycleStart() {
 		// reset after finished
 		a.nextLine = 0
 		a.runningGCode = false
+
+		if a.mode == ModeRun {
+			a.PopMode()
+		}
 	}()
 }
 

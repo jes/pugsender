@@ -73,7 +73,6 @@ func (n *NumPop) Layout(gtx C, location image.Point) D {
 				return label.Layout(gtx)
 			}),
 			layout.Rigid(func(gtx C) D {
-				// TODO: refactor this and the MDI editor into a common input box component
 				return Panel{Margin: layout.UniformInset(5), Width: 1, CornerRadius: 2, Color: borderColour, BackgroundColor: grey(0), Padding: layout.UniformInset(5)}.Layout(gtx, func(gtx C) D {
 					ed := material.Editor(n.th, n.editor, "")
 					/*TODO: if n.wantDefocus {

@@ -35,8 +35,3 @@
  * cycle time estimate
  * gcode previews in file selector
  * printable cheatsheet showing keyboard controls
-
-# Refactors
-
- * Numpop & MDI duplicate a lot of code to do with input boxes
- * I don't like the global `list` and `scrolledTo` variables in the gcode view

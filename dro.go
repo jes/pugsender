@@ -31,7 +31,16 @@ func (a *App) LayoutDRO(gtx C) D {
 }
 
 func (a *App) LayoutGrblStatus(gtx C) D {
-	label := material.H4(a.th, strings.ToUpper(a.g.Status))
+	status := a.g.Status
+	if status == "Hold:0" {
+		// Hold complete. Ready to resume.
+		status = "Hold"
+	} else if status == "Hold:1" {
+		// Hold in-progress. Reset will throw an alarm.
+		status = "Hold..."
+	}
+
+	label := material.H4(a.th, strings.ToUpper(status))
 	label.Alignment = text.Middle
 	borderColour := grey(128)
 	return widget.Border{Width: 1, CornerRadius: 2, Color: borderColour}.Layout(gtx, func(gtx C) D {

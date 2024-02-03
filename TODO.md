@@ -36,3 +36,4 @@
  * cycle time estimate
  * gcode previews in file selector
  * printable cheatsheet showing keyboard controls
+ * correctly handle the distinction between pixels, Dp, Sp, etc.?

@@ -1,7 +1,5 @@
 # Required
 
- * allow disabling autoconnect
- * allow connecting to manually-typed serial port
  * allow setting jog increment & feed rate
  * "follow outline" of gcode file
  * better ui for pause/resume etc.
@@ -14,6 +12,8 @@
 
 # Nice-to-have
 
+ * allow disabling autoconnect
+ * allow connecting to manually-typed serial port
  * efficient file browser, keyboard-first, tab-completion
  * show key shortcuts & mouse operations
  * raw serial console

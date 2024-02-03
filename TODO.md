@@ -40,3 +40,4 @@
  * when window is full-screen, file selector should be visible, instead of opened "behind" the application
  * show gcode filename in status bar
  * make the user confirm if they try to close while program is running
+ * support 4th axis (e.g. with grblHAL)

@@ -34,3 +34,12 @@
  * allow editing gcode?
  * cycle time estimate
  * gcode previews in file selector
+ * printable cheatsheet showing keyboard controls
+
+# Refactors
+
+ * Numpop & MDI duplicate a lot of code to do with input boxes
+ * I don't like all the `if axis == "X" { ... } else if axis == "Y" { ... }` etc. stuff for handling the X/Y/Z/A DRO, should make that neater
+ * The jog status has editable fields like the DRO, but they want to be formatted differently, I should abstract this into an "editable number" component, that uses numpop underneath for the actual editing, but gives more control over formatting, and then `LayoutDROCoord` and `LayoutJogField` or something can both use it
+ * I don't like the global `entered` map for the mouseover in the editable DRO
+ * I don't like the global `list` and `scrolledTo` variables in the gcode view

@@ -212,8 +212,6 @@ func (a *App) Run() {
 			// update jog control
 			if a.mode == ModeJog {
 				a.jog.Update(keystate)
-			} else {
-				a.jog.Cancel()
 			}
 
 			// fill with background colour

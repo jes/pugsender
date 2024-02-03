@@ -41,3 +41,4 @@
  * show gcode filename in status bar
  * make the user confirm if they try to close while program is running
  * support 4th axis (e.g. with grblHAL)
+ * line numbers on gcode view

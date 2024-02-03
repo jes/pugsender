@@ -14,7 +14,7 @@
 
 # Nice-to-have
 
- * efficient file browser
+ * efficient file browser, keyboard-first, tab-completion
  * show key shortcuts & mouse operations
  * raw serial console
  * mouse interface
@@ -33,3 +33,5 @@
  * "run from line" on gcode view
  * "pause after line" on gcode view?
  * allow editing gcode?
+ * cycle time estimate
+ * gcode previews in file selector

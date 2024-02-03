@@ -59,6 +59,13 @@ type App struct {
 	autoConnect bool
 	jog         JogControl
 
+	xDro        EditableNum
+	yDro        EditableNum
+	zDro        EditableNum
+	aDro        EditableNum
+	jogIncEdit  EditableNum
+	jogFeedEdit EditableNum
+
 	tp *ToolpathView
 
 	canUndo bool
@@ -103,6 +110,51 @@ func NewApp() *App {
 	a.split1.InvisibleBar = true
 	a.split2.Ratio = 0
 	a.split2.InvisibleBar = true
+
+	a.xDro.app = a
+	a.xDro.Label = "X"
+	a.xDro.TextSize = th.TextSize * 2.16
+	a.xDro.Callback = func(v float64) {
+		w := a.g.Wpos
+		w.X = v
+		a.SetWpos(w)
+	}
+	a.yDro.app = a
+	a.yDro.Label = "Y"
+	a.yDro.TextSize = th.TextSize * 2.16
+	a.yDro.Callback = func(v float64) {
+		w := a.g.Wpos
+		w.Y = v
+		a.SetWpos(w)
+	}
+	a.zDro.app = a
+	a.zDro.Label = "Z"
+	a.zDro.TextSize = th.TextSize * 2.16
+	a.zDro.Callback = func(v float64) {
+		w := a.g.Wpos
+		w.Z = v
+		a.SetWpos(w)
+	}
+	a.aDro.app = a
+	a.aDro.Label = "A"
+	a.aDro.TextSize = th.TextSize * 2.16
+	a.aDro.Callback = func(v float64) {
+		w := a.g.Wpos
+		w.A = v
+		a.SetWpos(w)
+	}
+	a.jogIncEdit.app = a
+	a.jogIncEdit.Label = "Inc."
+	a.jogIncEdit.TextSize = th.TextSize * 1.6
+	a.jogIncEdit.Callback = func(v float64) {
+		a.jog.Increment = v
+	}
+	a.jogFeedEdit.app = a
+	a.jogFeedEdit.Label = "Feed"
+	a.jogFeedEdit.TextSize = th.TextSize * 1.6
+	a.jogFeedEdit.Callback = func(v float64) {
+		a.jog.FeedRate = v
+	}
 
 	var err error
 	a.img, err = loadImage("pugs.png")
@@ -335,9 +387,9 @@ func (a *App) KeyPress(e key.Event) {
 		} else if e.Name == "S" {
 			a.CycleStart()
 		} else if e.Name == "X" {
-			a.ShowDROEditor("X", a.g.Wpos.X)
+			a.xDro.ShowEditor()
 		} else if e.Name == "Y" {
-			a.ShowDROEditor("Y", a.g.Wpos.Y)
+			a.yDro.ShowEditor()
 		} else if e.Name == "Z" {
 			if e.Modifiers.Contain(key.ModCtrl) {
 				// ctrl-z = undo WCO change
@@ -347,11 +399,11 @@ func (a *App) KeyPress(e key.Event) {
 					a.SetWpos(a.g.Mpos.Sub(a.undoWco))
 				}
 			} else {
-				a.ShowDROEditor("Z", a.g.Wpos.Z)
+				a.zDro.ShowEditor()
 			}
 		} else if e.Name == "A" {
 			// TODO: only if there is a 4th axis
-			a.ShowDROEditor("A", a.g.Wpos.A)
+			a.aDro.ShowEditor()
 		} else if e.Name == "O" {
 			// TODO: this is not exactly what I want, because:
 			// - it lets you open multiple file browsers simultaneously
@@ -367,9 +419,9 @@ func (a *App) KeyPress(e key.Event) {
 				}
 			}()
 		} else if e.Name == "I" {
-			a.ShowJogEditor("Increment", a.jog.Increment)
+			a.jogIncEdit.ShowEditor()
 		} else if e.Name == "F" {
-			a.ShowJogEditor("FeedRate", a.jog.FeedRate)
+			a.jogFeedEdit.ShowEditor()
 		}
 	}
 
@@ -389,7 +441,7 @@ func (a *App) KeyPress(e key.Event) {
 }
 
 func (a *App) ShowNumPop(numpopType string, initVal float64, cb func(float64)) {
-	a.numpop = NewNumPop(a, initVal, func(apply bool, val float64) {
+	a.numpop = NewNumPop(a.th, initVal, func(apply bool, val float64) {
 		if apply {
 			cb(val)
 		}
@@ -430,5 +482,24 @@ func (a *App) SetWpos(p V4d) {
 		// TODO: popup a message saying they can use Ctrl-Z to undo
 		a.undoWco = wco
 		a.canUndo = true
+	}
+}
+
+func (a *App) ShowEditor() bool {
+	if a.mode == ModeJog || a.mode == ModeRun || a.mode == ModeMDI {
+		a.PushMode(ModeNum)
+		return true
+	} else {
+		return false
+	}
+}
+
+func (a *App) ShowingEditor() bool {
+	return a.mode == ModeNum
+}
+
+func (a *App) EditorHidden() {
+	if a.mode == ModeNum {
+		a.PopMode()
 	}
 }

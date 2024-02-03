@@ -15,15 +15,15 @@ import (
 )
 
 type NumPop struct {
-	app     *App
+	th      *material.Theme
 	initVal float64
 	cb      func(bool, float64)
 	editor  *widget.Editor
 }
 
-func NewNumPop(app *App, initVal float64, cb func(bool, float64)) *NumPop {
+func NewNumPop(th *material.Theme, initVal float64, cb func(bool, float64)) *NumPop {
 	return &NumPop{
-		app:     app,
+		th:      th,
 		initVal: initVal,
 		cb:      cb,
 		editor: &widget.Editor{
@@ -68,14 +68,14 @@ func (n *NumPop) Layout(gtx C, location image.Point) D {
 				if val, ok := n.Value(); ok {
 					v = val
 				}
-				label := material.H4(n.app.th, fmt.Sprintf("%.3f ", v))
+				label := material.H4(n.th, fmt.Sprintf("%.3f ", v))
 				label.Alignment = text.End
 				return label.Layout(gtx)
 			}),
 			layout.Rigid(func(gtx C) D {
 				// TODO: refactor this and the MDI editor into a common input box component
 				return Panel{Margin: layout.UniformInset(5), Width: 1, CornerRadius: 2, Color: borderColour, BackgroundColor: grey(0), Padding: layout.UniformInset(5)}.Layout(gtx, func(gtx C) D {
-					ed := material.Editor(n.app.th, n.editor, "")
+					ed := material.Editor(n.th, n.editor, "")
 					/*TODO: if n.wantDefocus {
 						key.FocusOp{}.Add(gtx.Ops)
 						n.wantDefocus = false

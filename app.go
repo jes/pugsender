@@ -91,7 +91,7 @@ func NewApp() *App {
 	th.Palette.ContrastFg = rgb(100, 255, 255)
 
 	a := &App{
-		g:           NewGrbl(nil, "<nil>"),
+		g:           NewGrbl(nil, "/dev/null"),
 		mode:        ModeConnect,
 		th:          th,
 		autoConnect: true,

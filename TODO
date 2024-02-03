@@ -27,4 +27,3 @@ some sort of "processing" indicator while rendering toolpaths, loading gcode, et
 make keyboard shortcuts more sensible
 fix deadlocks
 "run from line" on gcode view
-fix WCO of gcode drawn on toolpath view

@@ -158,8 +158,10 @@ func (p *Path) RenderBackground() bool {
 }
 
 func (p *Path) RenderGCode() bool {
-	l := len(p.gcodePositions)
-	if !p.ForceRedraw && !p.needGCodeRedraw {
+	eps := 0.000001
+	if !p.ForceRedraw &&
+		!p.needGCodeRedraw &&
+		p.axes.Sub(p.last.axes).Length() < eps {
 		// no need to re-render
 		return false
 	}
@@ -168,11 +170,12 @@ func (p *Path) RenderGCode() bool {
 	gc := draw2dimg.NewGraphicContext(p.gcodeLayer)
 
 	// TODO: deduplicate with `RenderToolpath()`
+	l := len(p.gcodePositions)
 	if l > 0 {
 		gc.SetStrokeColor(color.White)
-		gc.MoveTo(p.MmToPx(p.gcodePositions[0].X, p.gcodePositions[0].Y))
+		gc.MoveTo(p.MmToPx(p.gcodePositions[0].X+p.axes.X, p.gcodePositions[0].Y+p.axes.Y))
 		for _, pos := range p.gcodePositions {
-			gc.LineTo(p.MmToPx(pos.X, pos.Y))
+			gc.LineTo(p.MmToPx(pos.X+p.axes.X, pos.Y+p.axes.Y))
 		}
 		gc.Stroke()
 	}

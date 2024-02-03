@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"image"
+	"os"
 	"strings"
 
 	"gioui.org/io/pointer"
@@ -26,6 +27,7 @@ func (a *App) LayoutDRO(gtx C) D {
 			layout.Rigid(func(gtx C) D {
 				return drawGrblModes(a.th, gtx, a.g)
 			}),
+			layout.Rigid(a.LayoutJogState),
 		)
 	})
 }
@@ -86,8 +88,23 @@ func (a *App) ShowDROEditor(axis string, initVal float64) {
 			wpos.Z = val
 		} else if axis == "A" {
 			wpos.A = val
+		} else {
+			fmt.Fprintf(os.Stderr, "ShowDROEditor callback: unrecognised axis [%s]\n", axis)
 		}
 		a.SetWpos(wpos)
+	})
+}
+
+func (a *App) ShowJogEditor(field string, initVal float64) {
+	a.ShowNumPop(field, initVal, func(val float64) {
+		if field == "Increment" {
+			a.jog.Increment = val
+		} else if field == "FeedRate" {
+			a.jog.FeedRate = val
+		} else {
+			fmt.Fprintf(os.Stderr, "ShowJogEditor callback: unrecognised field [%s]\n", field)
+		}
+		// TODO: a.jog.Cancel() and re-start continuous?
 	})
 }
 
@@ -159,6 +176,21 @@ func (a *App) LayoutFeedSpeed(gtx C) D {
 func (a *App) LayoutGCodes(gtx C) D {
 	label := material.H6(a.th, fmt.Sprintf(a.g.GCodes))
 	return label.Layout(gtx)
+}
+
+func (a *App) LayoutJogState(gtx C) D {
+	return Panel{Width: 1, Color: grey(128), CornerRadius: 5, Padding: layout.UniformInset(5), BackgroundColor: grey(32)}.Layout(gtx, func(gtx C) D {
+		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+			// TODO: these aren't DRO coords; and clicking doesn't let you edit
+			layout.Rigid(func(gtx C) D {
+				return a.LayoutDROCoord(gtx, "Increment", a.jog.Increment)
+			}),
+			layout.Rigid(func(gtx C) D {
+				return a.LayoutDROCoord(gtx, "FeedRate", a.jog.FeedRate)
+			}),
+		)
+	})
+
 }
 
 func drawGrblModes(th *material.Theme, gtx C, g *Grbl) D {

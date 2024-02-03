@@ -1,6 +1,5 @@
 # Required
 
- * allow setting jog increment & feed rate
  * "follow outline" of gcode file
  * better ui for pause/resume etc.
  * unlock an alarm

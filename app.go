@@ -176,7 +176,7 @@ func (a *App) Run() {
 			).Push(gtx.Ops)
 
 			keys := []string{
-				"(Ctrl)-+", "(Ctrl)--", "(Shift)-S", "(Shift)-R", "(Shift)-H", "(Shift)-X", "(Shift)-Y", "(Shift)-Z", "(Shift)-A", "(Shift)-G", "(Shift)-M", "(Shift)-J", "(Shift)-O", key.NameEscape, key.NameLeftArrow, key.NameRightArrow, key.NameUpArrow, key.NameDownArrow, key.NamePageUp, key.NamePageDown,
+				"(Ctrl)-+", "(Ctrl)--", "(Shift)-S", "(Shift)-R", "(Shift)-H", "(Shift)-X", "(Shift)-Y", "(Shift)-Z", "(Shift)-A", "(Shift)-G", "(Shift)-M", "(Shift)-J", "(Shift)-O", "(Shift)-I", "(Shift)-F", key.NameEscape, key.NameLeftArrow, key.NameRightArrow, key.NameUpArrow, key.NameDownArrow, key.NamePageUp, key.NamePageDown,
 			}
 			key.InputOp{
 				Keys: key.Set(strings.Join(keys, "|")),
@@ -366,6 +366,10 @@ func (a *App) KeyPress(e key.Event) {
 					a.LoadGCode(f)
 				}
 			}()
+		} else if e.Name == "I" {
+			a.ShowJogEditor("Increment", a.jog.Increment)
+		} else if e.Name == "F" {
+			a.ShowJogEditor("FeedRate", a.jog.FeedRate)
 		}
 	}
 
@@ -403,15 +407,18 @@ func (a *App) Label(text string) Label {
 }
 
 func chooseFonts(fonts []font.FontFace) []font.FontFace {
-	chosen := make([]font.FontFace, 0)
+	monos := make([]font.FontFace, 0)
+	// look for monospace fonts
 	for _, font := range fonts {
 		if strings.Contains(strings.ToLower(string(font.Font.Typeface)), "mono") {
-			chosen = append(chosen, font)
+			monos = append(monos, font)
 		}
 	}
-	if len(chosen) > 0 {
-		return chosen
+	if len(monos) > 0 {
+		// return monospace fonts, if any
+		return monos
 	} else {
+		// otherwise return all available fonts
 		return fonts
 	}
 }

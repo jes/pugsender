@@ -36,3 +36,4 @@
  * gcode previews in file selector
  * printable cheatsheet showing keyboard controls
  * correctly handle the distinction between pixels, Dp, Sp, etc.?
+ * don't draw an initial movement from (0,0,0) to the start point of the g-code

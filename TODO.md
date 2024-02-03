@@ -8,6 +8,7 @@
  * fix keyboard jog
  * make keyboard shortcuts more sensible
  * fix deadlocks
+ * if jog inc/feed numpop would overflow bottom of screen, draw it further up
 
 # Nice-to-have
 

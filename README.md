@@ -1,4 +1,4 @@
-# pugs
+# pugsender
 
 **G-code sender that gets out of the way. Work-in-progress.**
 

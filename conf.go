@@ -61,7 +61,7 @@ func (a *App) ConfFile() string {
 		fmt.Fprintf(os.Stderr, "os.UserConfigDir: %v; reverting to '.'\n", err)
 		confdir = "."
 	}
-	dir := filepath.Join(confdir, "pugs")
+	dir := filepath.Join(confdir, "pugsender")
 	os.MkdirAll(dir, os.ModePerm)
-	return filepath.Join(dir, "pugs.conf")
+	return filepath.Join(dir, "pugsender.conf")
 }

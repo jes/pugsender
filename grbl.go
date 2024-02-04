@@ -381,6 +381,16 @@ func (g *Grbl) SendResponse(line string) {
 	close(r.responseChan)
 }
 
+func (g *Grbl) AbortCommands() {
+	g.ResponseLock.Lock()
+	defer g.ResponseLock.Unlock()
+
+	for _, r := range g.ResponseQueue {
+		r.responseChan <- "aborted"
+	}
+	g.ResponseQueue = make([]GrblResponse, 0)
+}
+
 // extrapolated Wpos
 func (g *Grbl) WposExt() V4d {
 	dt := time.Now().Sub(g.UpdateTime)

@@ -29,10 +29,10 @@ func (a *App) LoadGCode(r io.Reader) {
 func (a *App) CycleStart() {
 	a.g.CommandRealtime('~')
 
+	a.wantToRunGCode = true
 	if a.runningGCode {
 		return
 	}
-	a.wantToRunGCode = true
 	a.runningGCode = true
 
 	a.PushMode(ModeRun)
@@ -43,10 +43,7 @@ func (a *App) CycleStart() {
 			a.nextLine += 1
 
 			fmt.Printf("> [%s]\n", line)
-			// TODO: use the character-counting method instead of waiting for a response
-			// TODO: do we need to do something else to make `a.wantToRunGCode`
-			// able to interrupt this? we wouldn't want to reset nextLine to 0
-			// after a 2nd instance starts running
+			// TODO: use the character-counting method instead of waiting for a response?
 			a.g.CommandWait(line)
 
 			// TODO: stop requesting G codes after every command (but
@@ -57,6 +54,7 @@ func (a *App) CycleStart() {
 		// reset after finished
 		a.nextLine = 0
 		a.runningGCode = false
+		a.wantToRunGCode = false
 
 		if a.mode == ModeRun {
 			a.PopMode()
@@ -66,6 +64,7 @@ func (a *App) CycleStart() {
 
 func (a *App) SoftReset() {
 	a.wantToRunGCode = false
+	a.g.AbortCommands()
 	a.g.CommandRealtime(0x18)
 }
 

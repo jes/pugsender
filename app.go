@@ -20,6 +20,7 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/text"
 	"gioui.org/unit"
+	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gioui.org/x/explorer"
 )
@@ -66,6 +67,10 @@ type App struct {
 	jogIncEdit  EditableNum
 	jogFeedEdit EditableNum
 
+	startBtn *widget.Clickable
+	holdBtn  *widget.Clickable
+	resetBtn *widget.Clickable
+
 	tp *ToolpathView
 
 	canUndo bool
@@ -93,9 +98,9 @@ func NewApp() *App {
 	th := material.NewTheme()
 	th.Shaper = text.NewShaper(text.WithCollection(chooseFonts(gofont.Collection())))
 	th.Palette.Bg = grey(0)
-	th.Palette.ContrastBg = rgb(75, 150, 150)
+	th.Palette.ContrastBg = grey(32)
 	th.Palette.Fg = grey(255)
-	th.Palette.ContrastFg = rgb(100, 255, 255)
+	th.Palette.ContrastFg = grey(255)
 
 	a := &App{
 		g:           NewGrbl(nil, "/dev/null"),
@@ -155,6 +160,10 @@ func NewApp() *App {
 	a.jogFeedEdit.Callback = func(v float64) {
 		a.jog.FeedRate = v
 	}
+
+	a.startBtn = new(widget.Clickable)
+	a.holdBtn = new(widget.Clickable)
+	a.resetBtn = new(widget.Clickable)
 
 	var err error
 	a.img, err = loadImage("pugs.png")
@@ -296,6 +305,7 @@ func (a *App) Layout(gtx C) D {
 			}, func(gtx C) D {
 				return a.split2.Layout(gtx, func(gtx C) D {
 					return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+						layout.Rigid(a.LayoutButtons),
 						layout.Flexed(1, func(gtx C) D {
 							return a.LayoutGCode(gtx)
 						}),
@@ -306,6 +316,30 @@ func (a *App) Layout(gtx C) D {
 			})
 		}),
 		layout.Rigid(a.LayoutStatusBar),
+	)
+}
+
+func (a *App) LayoutButtons(gtx C) D {
+	for a.startBtn.Clicked(gtx) {
+		a.CycleStart()
+	}
+	for a.holdBtn.Clicked(gtx) {
+		a.FeedHold()
+	}
+	for a.resetBtn.Clicked(gtx) {
+		a.SoftReset()
+	}
+
+	return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+		layout.Rigid(func(gtx C) D {
+			return material.Button(a.th, a.startBtn, "START").Layout(gtx)
+		}),
+		layout.Rigid(func(gtx C) D {
+			return material.Button(a.th, a.holdBtn, "HOLD").Layout(gtx)
+		}),
+		layout.Rigid(func(gtx C) D {
+			return material.Button(a.th, a.resetBtn, "RESET").Layout(gtx)
+		}),
 	)
 }
 

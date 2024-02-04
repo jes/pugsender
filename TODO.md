@@ -1,6 +1,5 @@
 # Required
 
- * "follow outline" of gcode file
  * better ui for pause/resume etc.
  * show grbl's messages to user (alarm/error/other message)
  * overrides
@@ -42,3 +41,6 @@
  * make the user confirm if they try to close while program is running
  * support 4th axis (e.g. with grblHAL)
  * line numbers on gcode view
+ * detect USB stick insertion & suggest to open the last-modified file, if nothing is currently open
+ * "follow outline" of gcode file
+ * show gcode bounding box dimensions in toolpath view

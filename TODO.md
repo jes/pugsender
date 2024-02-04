@@ -44,3 +44,5 @@
  * detect USB stick insertion & suggest to open the last-modified file, if nothing is currently open
  * "follow outline" of gcode file
  * show gcode bounding box dimensions in toolpath view
+ * icons on buttons
+ * make the relevant button show the click animation when you press the keyboard shortcut

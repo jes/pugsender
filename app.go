@@ -332,13 +332,13 @@ func (a *App) LayoutButtons(gtx C) D {
 
 	return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 		layout.Rigid(func(gtx C) D {
-			return material.Button(a.th, a.startBtn, "START").Layout(gtx)
+			return layout.UniformInset(5).Layout(gtx, material.Button(a.th, a.startBtn, "START").Layout)
 		}),
 		layout.Rigid(func(gtx C) D {
-			return material.Button(a.th, a.holdBtn, "HOLD").Layout(gtx)
+			return layout.UniformInset(5).Layout(gtx, material.Button(a.th, a.holdBtn, "HOLD").Layout)
 		}),
 		layout.Rigid(func(gtx C) D {
-			return material.Button(a.th, a.resetBtn, "RESET").Layout(gtx)
+			return layout.UniformInset(5).Layout(gtx, material.Button(a.th, a.resetBtn, "RESET").Layout)
 		}),
 	)
 }

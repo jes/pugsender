@@ -5,8 +5,10 @@
  * overrides
  * fix keyboard jog
  * make keyboard shortcuts more sensible
+ * make a cheatsheet of keyboard shortcuts
  * fix deadlocks
  * if jog inc/feed numpop would overflow bottom of screen, draw it further up
+ * rapid jog when shift key is held
 
 # Nice-to-have
 
@@ -46,3 +48,4 @@
  * show gcode bounding box dimensions in toolpath view
  * icons on buttons
  * make the relevant button show the click animation when you press the keyboard shortcut
+ * highlight gcode lines in path view when hovered in text view

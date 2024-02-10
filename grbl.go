@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -41,6 +43,7 @@ type Grbl struct {
 	ResponseQueue    []GrblResponse
 	ResponseLock     sync.Mutex
 	GCodes           string
+	GrblConfig       map[int]float64
 	WaitingForGCodes bool
 	Has4thAxis       bool
 }
@@ -57,6 +60,7 @@ func NewGrbl(port io.ReadWriteCloser, portName string) *Grbl {
 		Status:       "Connecting",
 		StatusUpdate: make(chan struct{}),
 		SerialFree:   128,
+		GrblConfig:   make(map[int]float64),
 	}
 	if port == nil {
 		g.Status = "Disconnected"
@@ -214,6 +218,9 @@ func (g *Grbl) Monitor() {
 		ticker.Stop()
 	}()
 
+	// make a regex for matching config lines (like "$120=25.000")
+	configRe := regexp.MustCompile("^\\$(\\d+)=(-?[0-9\\.]+)$")
+
 	// read from the serial port
 	scanner := bufio.NewScanner(g.SerialPort)
 	for scanner.Scan() {
@@ -224,6 +231,20 @@ func (g *Grbl) Monitor() {
 		} else if strings.HasPrefix(line, "[GC:") {
 			// g-codes update
 			g.ParseGCodes(line)
+		} else if configRe.MatchString(line) {
+			// config value ("$120=25.000")
+			vals := configRe.FindStringSubmatch(line)
+			key, err := strconv.ParseInt(vals[1], 10, 64)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s: strconv.ParseInt(%s): %v\n", line, vals[1], err)
+				continue
+			}
+			val, err := strconv.ParseFloat(vals[2], 64)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s: strconv.ParseFloat(%s): %v\n", line, vals[2], err)
+				continue
+			}
+			g.GrblConfig[int(key)] = val
 		} else if strings.HasPrefix(line, "ok") || strings.HasPrefix(line, "error") {
 			g.SendResponse(line)
 		}
@@ -257,6 +278,10 @@ func (g *Grbl) RequestGCodes() bool {
 	return true
 }
 
+func (g *Grbl) RequestGrblConfig() bool {
+	return g.CommandIgnore("$$")
+}
+
 // "status" should be a status report line from Grbl
 // send a struct{} to the StatusUpdate channel whenever there isa new status report
 func (g *Grbl) ParseStatus(status string) {
@@ -272,6 +297,11 @@ func (g *Grbl) ParseStatus(status string) {
 	if g.GCodes == "" {
 		// at startup, get the active g-codes without having to wait for the timer to fire
 		g.RequestGCodes()
+	}
+
+	if len(g.GrblConfig) == 0 {
+		// at startup, grab the grbl config
+		g.RequestGrblConfig()
 	}
 
 	// grbl in theory should give us either a wpos or an mpos

@@ -112,7 +112,7 @@ func NewApp() *App {
 	a.mdi = NewMDI(a)
 	a.jog = NewJogControl(a)
 	a.tp = NewToolpathView(a)
-	a.split1.Ratio = -0.5
+	a.split1.Ratio = -0.25
 	a.split1.InvisibleBar = true
 	a.split2.Ratio = 0
 	a.split2.InvisibleBar = true
@@ -181,7 +181,7 @@ func NewApp() *App {
 
 	a.w = app.NewWindow(
 		app.Title("G-code sender"),
-		app.Size(unit.Dp(800), unit.Dp(600)),
+		app.Size(unit.Dp(1024), unit.Dp(768)),
 	)
 
 	return a

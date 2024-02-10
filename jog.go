@@ -31,26 +31,30 @@ const (
 )
 
 type JogControl struct {
-	app          *App
-	keyHeld      map[string]bool
-	keyHeldLock  sync.RWMutex
-	FeedRate     float64
-	Increment    float64
-	TickerPeriod time.Duration
-	LastJog      time.Time
-	HaveJogged   bool
-	Target       V4d
-	Tick         chan struct{}
+	app            *App
+	keyHeld        map[string]bool
+	keyHeldLock    sync.RWMutex
+	Increment      float64
+	FeedRate       float64
+	RapidFeedRate  float64
+	ActiveFeedRate float64 // will be either FeedRate or RapidFeedRate depending on whether Shift is pressed
+	TickerPeriod   time.Duration
+	LastJog        time.Time
+	HaveJogged     bool
+	Target         V4d
+	Tick           chan struct{}
 }
 
 func NewJogControl(app *App) JogControl {
 	return JogControl{
-		app:          app,
-		keyHeld:      make(map[string]bool),
-		FeedRate:     100,
-		Increment:    1,
-		TickerPeriod: 100 * time.Millisecond,
-		Tick:         make(chan struct{}),
+		app:            app,
+		keyHeld:        make(map[string]bool),
+		FeedRate:       100,
+		RapidFeedRate:  1000,
+		ActiveFeedRate: 100,
+		Increment:      1,
+		TickerPeriod:   100 * time.Millisecond,
+		Tick:           make(chan struct{}),
 	}
 }
 
@@ -112,7 +116,7 @@ func (j *JogControl) SingleContinuous(force bool) {
 	j.keyHeldLock.RLock()
 	defer j.keyHeldLock.RUnlock()
 
-	jogDist := j.FeedRate * j.TickerPeriod.Minutes()
+	jogDist := j.ActiveFeedRate * j.TickerPeriod.Minutes()
 
 	anyJogs := false
 	for k, held := range j.keyHeld {
@@ -127,7 +131,7 @@ func (j *JogControl) SingleContinuous(force bool) {
 
 	if anyJogs || force {
 		// TODO: support 4th axis jogging?
-		j.SendJogCommand(fmt.Sprintf("X%.3fY%.3fZ%.3fF%.3f", j.Target.X, j.Target.Y, j.Target.Z, j.FeedRate))
+		j.SendJogCommand(fmt.Sprintf("X%.3fY%.3fZ%.3fF%.3f", j.Target.X, j.Target.Y, j.Target.Z, j.ActiveFeedRate))
 	}
 }
 
@@ -152,7 +156,7 @@ func (j *JogControl) AddIncrement(axis string, dir int, dist float64) float64 {
 
 func (j *JogControl) JogTo(x, y float64) {
 	j.Cancel()
-	j.SendJogCommand(fmt.Sprintf("X%.3fY%.3fF%.3f", x, y, j.FeedRate))
+	j.SendJogCommand(fmt.Sprintf("X%.3fY%.3fF%.3f", x, y, j.ActiveFeedRate))
 }
 
 func (j *JogControl) Update(newKeyState map[string]JogKeyState) {
@@ -163,29 +167,34 @@ func (j *JogControl) Update(newKeyState map[string]JogKeyState) {
 	forceMove := false
 	for k, state := range newKeyState {
 		isJogAction, axis, dir := JogAction(k)
-		if !isJogAction {
-			continue
+		if isJogAction {
+			if state == JogKeyPress {
+				j.AddIncrement(axis, dir, j.Increment)
+				needMove = true
+				forceMove = true
+			} else if state == JogKeyRelease {
+				if j.KeyHeld(k) {
+					needCancel = true
+					// TODO: if there are still other keys held, this doesn't cancel very effectively, what to do?
+					// 1. cancel all continuous jogs and make them re-press to start the others?
+					// 2. set the cancelled axis's jog target to the current Wpos? may cause it to reverse after it stops
+					// 3. set the cancelled axis's jog target to the current Wpos, but continue to update it to the new Wpos every update until it stops?
+				}
+			} else if state == JogKeyHold {
+				if !j.KeyHeld(k) {
+					needMove = true
+				}
+			}
 		}
 
 		if state == JogKeyPress {
 			j.keyHeld[k] = false
-			j.AddIncrement(axis, dir, j.Increment)
-			needMove = true
-			forceMove = true
 		} else if state == JogKeyRelease {
-			if j.KeyHeld(k) {
-				j.keyHeld[k] = false
-				needCancel = true
-				// TODO: if there are still other keys held, this doesn't cancel very effectively, what to do?
-				// 1. cancel all continuous jogs and make them re-press to start the others?
-				// 2. set the cancelled axis's jog target to the current Wpos? may cause it to reverse after it stops
-				// 3. set the cancelled axis's jog target to the current Wpos, but continue to update it to the new Wpos every update until it stops?
-			}
+			j.keyHeld[k] = false
 		} else if state == JogKeyHold {
-			if !j.KeyHeld(k) {
-				j.keyHeld[k] = true
-				needMove = true
-			}
+			j.keyHeld[k] = true
+		} else {
+			fmt.Fprintf(os.Stderr, "BUG: unexpected key state: %d\n", state)
 		}
 	}
 

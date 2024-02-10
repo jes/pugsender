@@ -60,12 +60,13 @@ type App struct {
 	autoConnect bool
 	jog         JogControl
 
-	xDro        EditableNum
-	yDro        EditableNum
-	zDro        EditableNum
-	aDro        EditableNum
-	jogIncEdit  EditableNum
-	jogFeedEdit EditableNum
+	xDro             EditableNum
+	yDro             EditableNum
+	zDro             EditableNum
+	aDro             EditableNum
+	jogIncEdit       EditableNum
+	jogFeedEdit      EditableNum
+	jogRapidFeedEdit EditableNum
 
 	startBtn *widget.Clickable
 	holdBtn  *widget.Clickable
@@ -149,16 +150,22 @@ func NewApp() *App {
 		a.SetWpos(w)
 	}
 	a.jogIncEdit.app = a
-	a.jogIncEdit.Label = "Inc."
+	a.jogIncEdit.Label = " Inc."
 	a.jogIncEdit.TextSize = th.TextSize * 1.6
 	a.jogIncEdit.Callback = func(v float64) {
 		a.jog.Increment = v
 	}
 	a.jogFeedEdit.app = a
-	a.jogFeedEdit.Label = "Feed"
+	a.jogFeedEdit.Label = " Feed"
 	a.jogFeedEdit.TextSize = th.TextSize * 1.6
 	a.jogFeedEdit.Callback = func(v float64) {
 		a.jog.FeedRate = v
+	}
+	a.jogRapidFeedEdit.app = a
+	a.jogRapidFeedEdit.Label = "Rapid"
+	a.jogRapidFeedEdit.TextSize = th.TextSize * 1.6
+	a.jogRapidFeedEdit.Callback = func(v float64) {
+		a.jog.RapidFeedRate = v
 	}
 
 	a.startBtn = new(widget.Clickable)
@@ -204,8 +211,20 @@ func (a *App) Run() {
 						} else {
 							keystate[gtxE.Name] = JogKeyPress
 						}
+
+						if gtxE.Name == key.NameShift {
+							a.jog.ActiveFeedRate = a.jog.RapidFeedRate
+							// TODO: some way to "refresh jog feed rate" that does nothing if not jogging
+							a.jog.JogTo(a.jog.Target.X, a.jog.Target.Y)
+						}
 					} else if gtxE.State == key.Release {
 						keystate[gtxE.Name] = JogKeyRelease
+
+						if gtxE.Name == key.NameShift {
+							a.jog.ActiveFeedRate = a.jog.FeedRate
+							// TODO: some way to "refresh jog feed rate" that does nothing if not jogging
+							a.jog.JogTo(a.jog.Target.X, a.jog.Target.Y)
+						}
 					}
 				case pointer.Event:
 					if gtxE.Kind == pointer.Press {
@@ -235,7 +254,7 @@ func (a *App) Run() {
 			).Push(gtx.Ops)
 
 			keys := []string{
-				"(Ctrl)-+", "(Ctrl)--", "(Shift)-S", "(Shift)-R", "(Shift)-H", "(Shift)-X", "(Shift)-Y", "(Shift)-Z", "(Shift)-A", "(Shift)-G", "(Shift)-M", "(Shift)-J", "(Shift)-O", "(Shift)-I", "(Shift)-F", "(Shift)-U", key.NameEscape, key.NameLeftArrow, key.NameRightArrow, key.NameUpArrow, key.NameDownArrow, key.NamePageUp, key.NamePageDown,
+				"(Ctrl)-+", "(Ctrl)--", "(Shift)-S", "(Shift)-R", "(Shift)-H", "(Shift)-X", "(Shift)-Y", "(Shift)-Z", "(Shift)-A", "(Shift)-G", "(Shift)-M", "(Shift)-J", "(Shift)-O", "(Shift)-I", "(Shift)-F", "(Shift)-U", "(Shift)-P", key.NameEscape, key.NameLeftArrow, key.NameRightArrow, key.NameUpArrow, key.NameDownArrow, key.NamePageUp, key.NamePageDown, key.NameShift,
 			}
 			key.InputOp{
 				Keys: key.Set(strings.Join(keys, "|")),
@@ -425,6 +444,8 @@ func (a *App) KeyPress(e key.Event) {
 			a.jogIncEdit.ShowEditor()
 		} else if e.Name == "F" {
 			a.jogFeedEdit.ShowEditor()
+		} else if e.Name == "P" {
+			a.jogRapidFeedEdit.ShowEditor()
 		}
 	}
 

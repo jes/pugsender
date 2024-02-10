@@ -103,6 +103,9 @@ func (a *App) LayoutJogState(gtx C) D {
 			layout.Rigid(func(gtx C) D {
 				return a.jogFeedEdit.Layout(gtx, a.jog.FeedRate)
 			}),
+			layout.Rigid(func(gtx C) D {
+				return a.jogRapidFeedEdit.Layout(gtx, a.jog.RapidFeedRate)
+			}),
 		)
 	})
 

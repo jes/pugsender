@@ -8,7 +8,6 @@
  * make a cheatsheet of keyboard shortcuts
  * fix deadlocks
  * if jog inc/feed numpop would overflow bottom of screen, draw it further up
- * rapid jog when shift key is held
 
 # Nice-to-have
 

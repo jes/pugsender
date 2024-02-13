@@ -205,7 +205,7 @@ func (a *App) Run() {
 				case key.Event:
 					if gtxE.State == key.Press {
 						a.KeyPress(gtxE)
-						if v, ok := keystate[gtxE.Name]; ok && v == JogKeyRelease {
+						if keystate[gtxE.Name] == JogKeyRelease {
 							// XXX: if a key is released and then pressed in the same frame, we take it to be held; is this right?
 							keystate[gtxE.Name] = JogKeyHold
 						} else {

@@ -46,6 +46,7 @@ type Grbl struct {
 	GrblConfig       map[int]float64
 	WaitingForGCodes bool
 	Has4thAxis       bool
+	writeChan        chan string
 }
 
 type GrblResponse struct {
@@ -61,6 +62,7 @@ func NewGrbl(port io.ReadWriteCloser, portName string) *Grbl {
 		StatusUpdate: make(chan struct{}),
 		SerialFree:   128,
 		GrblConfig:   make(map[int]float64),
+		writeChan:    make(chan string, 10),
 	}
 	if port == nil {
 		g.Status = "Disconnected"
@@ -98,12 +100,7 @@ func (g *Grbl) Command(line string) chan string {
 	g.ResponseLock.Unlock()
 
 	g.SerialFree -= len(line)
-	_, err := g.Write([]byte(line))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error from %s: %v\n", g.PortName, err)
-		g.Close()
-		return nil
-	}
+	g.writeChan <- line
 
 	return r.responseChan
 }
@@ -147,21 +144,8 @@ func (g *Grbl) CommandRealtime(cmd byte) bool {
 	if g.Closed {
 		return false
 	}
-	_, err := g.Write([]byte{cmd})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error from %s: %v\n", g.PortName, err)
-		g.Close()
-		return false
-	}
+	g.writeChan <- string(cmd)
 	return true
-}
-
-// implements io.Writer
-func (g *Grbl) Write(p []byte) (n int, err error) {
-	// TODO: is there a race condition where concurrent writes can end up interleaved?
-	// TODO: is there a race condition where we decrease SerialFree, then read a status report that still has the old SerialFree in it,
-	// and then send some more bytes but the buffer is already full?
-	return g.SerialPort.Write(p)
 }
 
 // implements io.Closer
@@ -185,6 +169,7 @@ func (g *Grbl) Monitor() {
 		g.Close()
 		return
 	}
+	defer g.Close()
 
 	// ask for a status update every 200ms, until Closed
 	//
@@ -195,62 +180,65 @@ func (g *Grbl) Monitor() {
 	// data."
 	// https://github.com/grbl/grbl/wiki/Interfacing-with-Grbl
 	g.RequestStatusUpdate()
-	go func() {
-		ticker := time.NewTicker(200 * time.Millisecond)
-		for {
-			<-ticker.C
-			if !g.RequestStatusUpdate() {
-				break
-			}
-		}
-		ticker.Stop()
-	}()
+	statusTicker := time.NewTicker(200 * time.Millisecond)
+	defer statusTicker.Stop()
 
 	// ask for active g-codes every second, until closed
-	go func() {
-		ticker := time.NewTicker(time.Second)
-		for {
-			<-ticker.C
-			if !g.RequestGCodes() {
-				break
-			}
-		}
-		ticker.Stop()
-	}()
+	gcodesTicker := time.NewTicker(time.Second)
+	defer gcodesTicker.Stop()
 
 	// make a regex for matching config lines (like "$120=25.000")
 	configRe := regexp.MustCompile("^\\$(\\d+)=(-?[0-9\\.]+)$")
 
-	linesChan := make(chan string)
-	go g.readSerial(linesChan)
+	readChan := make(chan string)
+	go g.readSerial(readChan)
 
+loop:
 	for {
-		line := <-linesChan
-		if strings.HasPrefix(line, "<") && strings.HasSuffix(line, ">") {
-			// status update
-			g.ParseStatus(line)
-		} else if strings.HasPrefix(line, "[GC:") {
-			// g-codes update
-			g.ParseGCodes(line)
-		} else if configRe.MatchString(line) {
-			// config value ("$120=25.000")
-			vals := configRe.FindStringSubmatch(line)
-			key, err := strconv.ParseInt(vals[1], 10, 64)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s: strconv.ParseInt(%s): %v\n", line, vals[1], err)
-				continue
+		select {
+		case <-statusTicker.C: // request a status update
+			if !g.RequestStatusUpdate() {
+				break loop
 			}
-			val, err := strconv.ParseFloat(vals[2], 64)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s: strconv.ParseFloat(%s): %v\n", line, vals[2], err)
-				continue
+
+		case <-gcodesTicker.C: // request G codes
+			if !g.RequestGCodes() {
+				break loop
 			}
-			g.GrblConfig[int(key)] = val
-		} else if strings.HasPrefix(line, "ok") || strings.HasPrefix(line, "error") {
-			g.SendResponse(line)
+
+		case line := <-g.writeChan: // write to grbl
+			_, err := g.SerialPort.Write([]byte(line))
+			if err != nil {
+				g.SendResponse(fmt.Sprintf("fail:write error: %v", err))
+				break loop
+			}
+
+		case line := <-readChan: // read from grbl
+			if strings.HasPrefix(line, "<") && strings.HasSuffix(line, ">") {
+				// status update
+				g.ParseStatus(line)
+			} else if strings.HasPrefix(line, "[GC:") {
+				// g-codes update
+				g.ParseGCodes(line)
+			} else if configRe.MatchString(line) {
+				// config value ("$120=25.000")
+				vals := configRe.FindStringSubmatch(line)
+				key, err := strconv.ParseInt(vals[1], 10, 64)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "%s: strconv.ParseInt(%s): %v\n", line, vals[1], err)
+					continue loop
+				}
+				val, err := strconv.ParseFloat(vals[2], 64)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "%s: strconv.ParseFloat(%s): %v\n", line, vals[2], err)
+					continue loop
+				}
+				g.GrblConfig[int(key)] = val
+			} else if strings.HasPrefix(line, "ok") || strings.HasPrefix(line, "error") {
+				g.SendResponse(line)
+			}
 		}
 	}
-	g.Close()
 }
 
 // read lines from the serial port and put then on channel c
@@ -392,7 +380,11 @@ func (g *Grbl) ParseStatus(status string) {
 	distanceMoved := g.Mpos.Sub(prevMpos)
 	g.Vel = distanceMoved.Div(g.UpdateTime.Sub(prevUpdateTime).Minutes())
 
-	g.StatusUpdate <- struct{}{}
+	// send a status update if anyone is waiting for one (what if multiple readers?)
+	select {
+	case g.StatusUpdate <- struct{}{}:
+	default:
+	}
 }
 
 func (g *Grbl) ParseGCodes(line string) {
@@ -426,7 +418,7 @@ func (g *Grbl) AbortCommands() {
 	defer g.ResponseLock.Unlock()
 
 	for _, r := range g.ResponseQueue {
-		r.responseChan <- "aborted"
+		r.responseChan <- "fail:aborted"
 	}
 	g.ResponseQueue = make([]GrblResponse, 0)
 }

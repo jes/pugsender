@@ -221,10 +221,11 @@ func (g *Grbl) Monitor() {
 	// make a regex for matching config lines (like "$120=25.000")
 	configRe := regexp.MustCompile("^\\$(\\d+)=(-?[0-9\\.]+)$")
 
-	// read from the serial port
-	scanner := bufio.NewScanner(g.SerialPort)
-	for scanner.Scan() {
-		line := scanner.Text()
+	linesChan := make(chan string)
+	go g.readSerial(linesChan)
+
+	for {
+		line := <-linesChan
 		if strings.HasPrefix(line, "<") && strings.HasSuffix(line, ">") {
 			// status update
 			g.ParseStatus(line)
@@ -250,6 +251,15 @@ func (g *Grbl) Monitor() {
 		}
 	}
 	g.Close()
+}
+
+// read lines from the serial port and put then on channel c
+func (g *Grbl) readSerial(c chan string) {
+	scanner := bufio.NewScanner(g.SerialPort)
+	for scanner.Scan() {
+		c <- scanner.Text()
+	}
+	close(c)
 }
 
 // request a status update, return true if ok or false if not

@@ -48,3 +48,4 @@
  * icons on buttons
  * make the relevant button show the click animation when you press the keyboard shortcut
  * highlight gcode lines in path view when hovered in text view
+ * save some reference coordinates, and then "set work offset" or "jog to here" on them

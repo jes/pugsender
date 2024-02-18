@@ -5,7 +5,6 @@ import (
 	"image"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"gioui.org/app"
@@ -71,9 +70,12 @@ type App struct {
 	jogFeedEdit      EditableNum
 	jogRapidFeedEdit EditableNum
 
-	startBtn *widget.Clickable
-	holdBtn  *widget.Clickable
-	resetBtn *widget.Clickable
+	startBtn  *widget.Clickable
+	holdBtn   *widget.Clickable
+	resetBtn  *widget.Clickable
+	drainBtn  *widget.Clickable
+	singleBtn *widget.Clickable
+	unlockBtn *widget.Clickable
 
 	tp *ToolpathView
 
@@ -83,16 +85,12 @@ type App struct {
 	numpop     *NumPop
 	numpopType string
 
-	confLock     sync.RWMutex
-	canWriteConf bool
-
 	split1 Split
 	split2 Split
 
-	gcode          []string
-	nextLine       int
-	runningGCode   bool
-	wantToRunGCode bool
+	gcode           []string
+	nextLine        int
+	gcodeRunnerChan chan RunnerCmd
 
 	img image.Image
 	mdi *MDI
@@ -107,15 +105,15 @@ func NewApp() *App {
 	th.Palette.ContrastFg = grey(255)
 
 	a := &App{
-		g:           NewGrbl(nil, "/dev/null"),
-		mode:        ModeConnect,
-		th:          th,
-		autoConnect: true,
+		g:               NewGrbl(nil, "/dev/null"),
+		mode:            ModeConnect,
+		th:              th,
+		autoConnect:     true,
+		gcodeRunnerChan: make(chan RunnerCmd),
 	}
 
 	// XXX: grab a "Connecting" GrblStatus
 	a.gsNew = a.g.status
-	a.gs = a.g.status
 
 	a.mdi = NewMDI(a)
 	a.jog = NewJogControl(a)
@@ -179,6 +177,9 @@ func NewApp() *App {
 	a.startBtn = new(widget.Clickable)
 	a.holdBtn = new(widget.Clickable)
 	a.resetBtn = new(widget.Clickable)
+	a.drainBtn = new(widget.Clickable)
+	a.singleBtn = new(widget.Clickable)
+	a.unlockBtn = new(widget.Clickable)
 
 	var err error
 	a.img, err = loadImage("pugs.png")
@@ -197,6 +198,7 @@ func NewApp() *App {
 
 func (a *App) Run() {
 	go a.jog.Run()
+	go a.GcodeRunner(a.gcodeRunnerChan)
 
 	var ops op.Ops
 
@@ -283,7 +285,7 @@ func (a *App) Run() {
 			e.Frame(gtx.Ops)
 		case system.DestroyEvent:
 			// save work coordinates before exiting
-			a.WriteConf()
+			a.WriteConf(a.gs)
 			os.Exit(0)
 		}
 	}
@@ -291,7 +293,8 @@ func (a *App) Run() {
 
 func (a *App) Connect(g *Grbl, ch chan GrblStatus) {
 	a.g = g
-	a.ReadConf()
+	a.gsNew = g.status
+	go a.ReadConf()
 
 	// write the current work coordinates to disk once per second
 	go func() {
@@ -299,7 +302,7 @@ func (a *App) Connect(g *Grbl, ch chan GrblStatus) {
 		for {
 			<-ticker.C
 			if !a.gs.Closed {
-				a.WriteConf()
+				a.WriteConf(a.gs)
 			}
 		}
 	}()
@@ -353,13 +356,22 @@ func (a *App) Layout(gtx C) D {
 
 func (a *App) LayoutButtons(gtx C) D {
 	for a.startBtn.Clicked(gtx) {
-		a.CycleStart()
+		a.gcodeRunnerChan <- CmdStart
 	}
 	for a.holdBtn.Clicked(gtx) {
-		a.FeedHold()
+		a.gcodeRunnerChan <- CmdPause
 	}
 	for a.resetBtn.Clicked(gtx) {
-		a.SoftReset()
+		a.gcodeRunnerChan <- CmdStop
+	}
+	for a.drainBtn.Clicked(gtx) {
+		a.gcodeRunnerChan <- CmdDrain
+	}
+	for a.singleBtn.Clicked(gtx) {
+		a.gcodeRunnerChan <- CmdSingle
+	}
+	for a.unlockBtn.Clicked(gtx) {
+		a.AlarmUnlock()
 	}
 
 	return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
@@ -371,6 +383,15 @@ func (a *App) LayoutButtons(gtx C) D {
 		}),
 		layout.Rigid(func(gtx C) D {
 			return layout.UniformInset(5).Layout(gtx, material.Button(a.th, a.resetBtn, "RESET").Layout)
+		}),
+		layout.Rigid(func(gtx C) D {
+			return layout.UniformInset(5).Layout(gtx, material.Button(a.th, a.drainBtn, "DRAIN").Layout)
+		}),
+		layout.Rigid(func(gtx C) D {
+			return layout.UniformInset(5).Layout(gtx, material.Button(a.th, a.singleBtn, "SINGLE").Layout)
+		}),
+		layout.Rigid(func(gtx C) D {
+			return layout.UniformInset(5).Layout(gtx, material.Button(a.th, a.unlockBtn, "UNLOCK").Layout)
 		}),
 	)
 }

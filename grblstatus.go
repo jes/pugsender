@@ -34,7 +34,14 @@ type GrblStatus struct {
 	Has4thAxis       bool
 }
 
-type GrblResponse struct {
-	responseChan chan string
-	command      string
+// extrapolated Wpos
+func (gs GrblStatus) WposExt() V4d {
+	dt := time.Now().Sub(gs.UpdateTime)
+	return gs.Wpos.Add(gs.Vel.Mul(dt.Minutes()))
+}
+
+// extrapolated Mpos
+func (gs GrblStatus) MposExt() V4d {
+	dt := time.Now().Sub(gs.UpdateTime)
+	return gs.Mpos.Add(gs.Vel.Mul(dt.Minutes()))
 }

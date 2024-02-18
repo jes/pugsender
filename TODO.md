@@ -29,7 +29,7 @@
  * prevent submitting the MDI if there is nothing to submit to? (e.g. disconnected)
  * make the MDI detect all arrow key events (why are some suppressed?)
  * some sort of "processing" indicator while rendering toolpaths, loading gcode, etc.
- * "run from line" on gcode view
+ * "run from line", "run to line", on gcode view
  * "pause after line" on gcode view?
  * allow editing gcode?
  * cycle time estimate
@@ -51,3 +51,4 @@
  * save some reference coordinates, and then "set work offset" or "jog to here" on them
  * make it so the colours in the toolpath view can distinguish between "machine has moved here", "machine will move here", and "machine has moved here and will move here again"
  * remember config: jog inc, jog feed, jog rapid, split layout ratios
+ * search in gcode view

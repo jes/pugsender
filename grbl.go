@@ -8,16 +8,20 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
 type Grbl struct {
 	serialPort    io.ReadWriteCloser
 	status        GrblStatus
+	writeChan     chan GrblResponse
+	abortChan     chan struct{}
 	responseQueue []GrblResponse
-	responseLock  sync.Mutex
-	writeChan     chan string
+}
+
+type GrblResponse struct {
+	responseChan chan string
+	command      string
 }
 
 func NewGrbl(port io.ReadWriteCloser, portName string) *Grbl {
@@ -34,20 +38,21 @@ func NewGrbl(port io.ReadWriteCloser, portName string) *Grbl {
 	g := &Grbl{
 		serialPort: port,
 		status:     status,
-		writeChan:  make(chan string, 10),
+		writeChan:  make(chan GrblResponse, 10),
+		abortChan:  make(chan struct{}),
 	}
 	return g
 }
 
-// add the given line to the command queue, returning a channel
-// which will receive the response if the command was added to
-// the queue, or nil if the queue is full
+// add the given line to the command queue, sending the response
+// to the given channel, and return true,
+// or return false if the command was not sent
 //
 // only use this function for commands that expect a response,
 // use CommandRealtime() for commands that give no response
-func (g *Grbl) Command(line string) chan string {
+func (g *Grbl) Command(line string, respChan chan string) bool {
 	if !g.status.Ready {
-		return nil
+		return false
 	}
 
 	// canonicalise line ending
@@ -59,21 +64,13 @@ func (g *Grbl) Command(line string) chan string {
 		// TODO: race condition: we could have multiple threads in this
 		// function at the same time, need to also check SerialFree later
 		// when stuff pops out of g.writeChan
-		return nil
+		return false
 	}
-
-	r := GrblResponse{
-		responseChan: make(chan string),
-		command:      line,
-	}
-	g.responseLock.Lock()
-	g.responseQueue = append(g.responseQueue, r)
-	g.responseLock.Unlock()
 
 	g.status.SerialFree -= len(line)
-	g.writeChan <- line
+	g.writeChan <- GrblResponse{respChan, line}
 
-	return r.responseChan
+	return true
 }
 
 // add the given line to the command queue, return true if
@@ -84,11 +81,11 @@ func (g *Grbl) CommandIgnore(line string) bool {
 	if !g.status.Ready {
 		return false
 	}
-	c := g.Command(line)
-	if c == nil {
+	c := make(chan string)
+	go func() { <-c }() // ignore response
+	if !g.Command(line, c) {
 		return false
 	}
-	go func() { <-c }() // ignore response
 	return true
 }
 
@@ -101,8 +98,8 @@ func (g *Grbl) CommandWait(line string) (bool, string) {
 	if !g.status.Ready {
 		return false, ""
 	}
-	c := g.Command(line)
-	if c == nil {
+	c := make(chan string, 1)
+	if !g.Command(line, c) {
 		return false, ""
 	}
 	resp := <-c
@@ -115,7 +112,7 @@ func (g *Grbl) CommandRealtime(cmd byte) bool {
 	if g.status.Closed {
 		return false
 	}
-	g.writeChan <- string(cmd)
+	g.writeChan <- GrblResponse{nil, string(cmd)}
 	return true
 }
 
@@ -180,10 +177,20 @@ loop:
 				break loop
 			}
 
-		case line := <-g.writeChan: // write to grbl
-			// TODO: maybe check buffer space at this point?
+		case <-g.abortChan: // abort commands
+			g.doAbortCommands()
+
+		case r := <-g.writeChan: // write to grbl
+			if r.responseChan != nil {
+				// responseChan is nil for commands that don't expect
+				// a response (i.e. realtime commands)
+				g.responseQueue = append(g.responseQueue, r)
+			}
+
+			// TODO: maybe check buffer space at this point? and queue
+			// or drop the command if there is not buffer space yet?
 			// (can probably ignore for realtime commands though)
-			_, err := g.serialPort.Write([]byte(line))
+			_, err := g.serialPort.Write([]byte(r.command))
 			if err != nil {
 				g.SendResponse(fmt.Sprintf("fail:write error: %v", err))
 				break loop
@@ -375,10 +382,8 @@ func (g *Grbl) SendResponse(line string) {
 		return
 	}
 
-	g.responseLock.Lock()
 	r := g.responseQueue[0]
 	g.responseQueue = g.responseQueue[1:]
-	g.responseLock.Unlock()
 
 	if strings.HasPrefix(line, "error") {
 		fmt.Printf("[%s]: %s\n", r.command, line)
@@ -386,29 +391,17 @@ func (g *Grbl) SendResponse(line string) {
 
 	g.status.SerialFree += len(r.command)
 	r.responseChan <- line
-	close(r.responseChan)
 }
 
 func (g *Grbl) AbortCommands() {
-	g.responseLock.Lock()
-	defer g.responseLock.Unlock()
+	g.abortChan <- struct{}{}
+}
 
+func (g *Grbl) doAbortCommands() {
 	for _, r := range g.responseQueue {
 		r.responseChan <- "fail:aborted"
 	}
 	g.responseQueue = make([]GrblResponse, 0)
-}
-
-// extrapolated Wpos
-func (g *Grbl) WposExt() V4d {
-	dt := time.Now().Sub(g.status.UpdateTime)
-	return g.status.Wpos.Add(g.status.Vel.Mul(dt.Minutes()))
-}
-
-// extrapolated Mpos
-func (g *Grbl) MposExt() V4d {
-	dt := time.Now().Sub(g.status.UpdateTime)
-	return g.status.Mpos.Add(g.status.Vel.Mul(dt.Minutes()))
 }
 
 func (g *Grbl) SetWpos(p V4d) bool {

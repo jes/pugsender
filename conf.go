@@ -10,10 +10,7 @@ import (
 
 // TODO: is there a sensible config lib that I should be using instead?
 
-func (a *App) WriteConf() {
-	a.confLock.Lock()
-	defer a.confLock.Unlock()
-
+func (a *App) WriteConf(gs GrblStatus) {
 	filename := a.ConfFile()
 	f, err := os.Create(a.ConfFile())
 	if err != nil {
@@ -22,13 +19,10 @@ func (a *App) WriteConf() {
 	}
 	defer f.Close()
 
-	fmt.Fprintf(f, "wpos=%.3f,%.3f,%.3f,%.3f\n", a.gs.Wpos.X, a.gs.Wpos.Y, a.gs.Wpos.Z, a.gs.Wpos.A)
+	fmt.Fprintf(f, "wpos=%.3f,%.3f,%.3f,%.3f\n", gs.Wpos.X, gs.Wpos.Y, gs.Wpos.Z, gs.Wpos.A)
 }
 
 func (a *App) ReadConf() {
-	a.confLock.RLock()
-	defer a.confLock.RUnlock()
-
 	filename := a.ConfFile()
 	f, err := os.Open(a.ConfFile())
 	if err != nil {
@@ -47,8 +41,11 @@ func (a *App) ReadConf() {
 
 		if key == "wpos" {
 			a.g.SetWpos(valv4d)
-			a.gs.Wpos = valv4d
-			a.gs.Wco = a.gs.Mpos.Sub(valv4d)
+			// XXX: assigning to gsNew is kind of a bodge, but we want this so
+			// that when the application first loads up and is not yet connected
+			// to grbl, it shows the saved coordinates
+			a.gsNew.Wpos = valv4d
+			a.gsNew.Wco = a.gs.Mpos.Sub(valv4d)
 		} else {
 			fmt.Fprintf(os.Stderr, "%s: unrecognised config key: [%s]\n", filename, key)
 		}

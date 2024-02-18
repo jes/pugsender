@@ -62,13 +62,16 @@ type App struct {
 	autoConnect bool
 	jog         JogControl
 
-	xDro             EditableNum
-	yDro             EditableNum
-	zDro             EditableNum
-	aDro             EditableNum
-	jogIncEdit       EditableNum
-	jogFeedEdit      EditableNum
-	jogRapidFeedEdit EditableNum
+	xDro                EditableNum
+	yDro                EditableNum
+	zDro                EditableNum
+	aDro                EditableNum
+	jogIncEdit          EditableNum
+	jogFeedEdit         EditableNum
+	jogRapidFeedEdit    EditableNum
+	feedOverrideEdit    EditableNum
+	rapidOverrideEdit   EditableNum
+	spindleOverrideEdit EditableNum
 
 	startBtn  *widget.Clickable
 	holdBtn   *widget.Clickable
@@ -112,8 +115,7 @@ func NewApp() *App {
 		gcodeRunnerChan: make(chan RunnerCmd),
 	}
 
-	// XXX: grab a "Connecting" GrblStatus
-	a.gsNew = a.g.status
+	a.gsNew = DefaultGrblStatus()
 
 	a.mdi = NewMDI(a)
 	a.jog = NewJogControl(a)
@@ -172,6 +174,27 @@ func NewApp() *App {
 	a.jogRapidFeedEdit.TextSize = th.TextSize * 1.6
 	a.jogRapidFeedEdit.Callback = func(v float64) {
 		a.jog.RapidFeedRate = v
+	}
+	a.feedOverrideEdit.app = a
+	a.feedOverrideEdit.Label = "   Feed"
+	a.feedOverrideEdit.TextSize = th.TextSize * 1.6
+	a.feedOverrideEdit.Int = true
+	a.feedOverrideEdit.Callback = func(v float64) {
+		a.g.SetFeedOverride(int(v))
+	}
+	a.rapidOverrideEdit.app = a
+	a.rapidOverrideEdit.Label = "  Rapid"
+	a.rapidOverrideEdit.TextSize = th.TextSize * 1.6
+	a.rapidOverrideEdit.Int = true
+	a.rapidOverrideEdit.Callback = func(v float64) {
+		a.g.SetRapidOverride(int(v))
+	}
+	a.spindleOverrideEdit.app = a
+	a.spindleOverrideEdit.Label = "Spindle"
+	a.spindleOverrideEdit.TextSize = th.TextSize * 1.6
+	a.spindleOverrideEdit.Int = true
+	a.spindleOverrideEdit.Callback = func(v float64) {
+		a.g.SetSpindleOverride(int(v))
 	}
 
 	a.startBtn = new(widget.Clickable)

@@ -12,6 +12,7 @@ type EditableNum struct {
 	app      *App
 	Label    string
 	TextSize unit.Sp
+	Int      bool
 	Callback func(float64)
 
 	lastVal    float64
@@ -72,6 +73,7 @@ func (e *EditableNum) ShowEditor() bool {
 		}
 		e.HideEditor()
 	})
+	e.numpop.Int = e.Int
 	e.showEditor = true
 	return true
 }

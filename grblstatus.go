@@ -34,6 +34,19 @@ type GrblStatus struct {
 	Has4thAxis       bool
 }
 
+func DefaultGrblStatus() GrblStatus {
+	return GrblStatus{
+		PortName:        "/dev/null",
+		Closed:          true,
+		Status:          "Connecting",
+		SerialFree:      128,
+		GrblConfig:      make(map[int]float64),
+		FeedOverride:    100,
+		RapidOverride:   100,
+		SpindleOverride: 100,
+	}
+}
+
 // extrapolated Wpos
 func (gs GrblStatus) WposExt() V4d {
 	dt := time.Now().Sub(gs.UpdateTime)

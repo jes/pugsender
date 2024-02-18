@@ -25,15 +25,11 @@ type GrblResponse struct {
 }
 
 func NewGrbl(port io.ReadWriteCloser, portName string) *Grbl {
-	status := GrblStatus{
-		PortName:   portName,
-		Status:     "Connecting",
-		SerialFree: 128,
-		GrblConfig: make(map[int]float64),
-	}
+	status := DefaultGrblStatus()
 	if port == nil {
 		status.Status = "Disconnected"
-		status.Closed = true
+	} else {
+		status.Closed = false
 	}
 	g := &Grbl{
 		serialPort: port,
@@ -315,8 +311,8 @@ func (g *Grbl) ParseStatus(status string, ch chan GrblStatus) {
 			g.status.Has4thAxis = (axes == 4)
 		} else if keylc == "ov" { // overrides
 			g.status.FeedOverride = valv4d.X
-			g.status.RapidOverride = valv4d.X
-			g.status.SpindleOverride = valv4d.X
+			g.status.RapidOverride = valv4d.Y
+			g.status.SpindleOverride = valv4d.Z
 		} else if keylc == "a" { // accessories
 			g.status.SpindleCw = strings.Contains(val, "S")
 			g.status.SpindleCcw = strings.Contains(val, "C")
@@ -420,4 +416,55 @@ func (g *Grbl) SetWpos(p V4d) bool {
 	}
 	ok, _ := g.CommandWait(line)
 	return ok
+}
+
+func (g *Grbl) SetFeedOverride(v int) bool {
+	delta := v - int(g.status.FeedOverride)
+	return g.SendOverrideDelta(delta, 0x91, 0x92, 0x93, 0x94)
+}
+
+func (g *Grbl) SetRapidOverride(v int) bool {
+	if v < 38 {
+		// 25% rapid override
+		return g.CommandRealtime(0x97)
+	} else if v < 68 {
+		// 50% rapid override
+		return g.CommandRealtime(0x96)
+	} else {
+		// 100% rapid override
+		return g.CommandRealtime(0x95)
+	}
+}
+
+func (g *Grbl) SetSpindleOverride(v int) bool {
+	delta := v - int(g.status.SpindleOverride)
+	return g.SendOverrideDelta(delta, 0x9a, 0x9b, 0x9c, 0x9d)
+}
+
+func (g *Grbl) SendOverrideDelta(delta int, plus10 byte, minus10 byte, plus1 byte, minus1 byte) bool {
+	for delta >= 10 {
+		if !g.CommandRealtime(plus10) {
+			return false
+		}
+		delta -= 10
+	}
+	for delta <= -10 {
+		if !g.CommandRealtime(minus10) {
+			return false
+		}
+		delta += 10
+	}
+	for delta >= 1 {
+		if !g.CommandRealtime(plus1) {
+			return false
+		}
+		delta--
+	}
+	for delta <= -1 {
+		if !g.CommandRealtime(minus1) {
+			return false
+		}
+		delta++
+	}
+	return true
 }

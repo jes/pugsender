@@ -24,6 +24,8 @@ func (a *App) LayoutDRO(gtx C) D {
 				return drawGrblModes(a.th, gtx, a.gs)
 			}),
 			layout.Rigid(a.LayoutJogState),
+			layout.Rigid(layout.Spacer{Height: 5}.Layout),
+			layout.Rigid(a.LayoutOverrides),
 		)
 	})
 }
@@ -108,7 +110,26 @@ func (a *App) LayoutJogState(gtx C) D {
 			}),
 		)
 	})
+}
 
+func (a *App) LayoutOverrides(gtx C) D {
+	return Panel{Width: 1, Color: grey(128), CornerRadius: 5, Padding: layout.UniformInset(5), BackgroundColor: grey(32)}.Layout(gtx, func(gtx C) D {
+		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+			layout.Rigid(func(gtx C) D {
+				return material.H6(a.th, "Overrides").Layout(gtx)
+			}),
+			layout.Rigid(func(gtx C) D {
+				return a.feedOverrideEdit.Layout(gtx, a.gs.FeedOverride)
+			}),
+			layout.Rigid(func(gtx C) D {
+				// TODO: since this only supports 25%, 50%, 100%, do we want different UI? or don't expose it at all?
+				return a.rapidOverrideEdit.Layout(gtx, a.gs.RapidOverride)
+			}),
+			layout.Rigid(func(gtx C) D {
+				return a.spindleOverrideEdit.Layout(gtx, a.gs.SpindleOverride)
+			}),
+		)
+	})
 }
 
 func drawGrblModes(th *material.Theme, gtx C, gs GrblStatus) D {

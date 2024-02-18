@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"image"
+	"math"
 
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -19,6 +20,7 @@ type NumPop struct {
 	initVal float64
 	cb      func(bool, float64)
 	editor  *widget.Editor
+	Int     bool
 }
 
 func NewNumPop(th *material.Theme, initVal float64, cb func(bool, float64)) *NumPop {
@@ -69,6 +71,9 @@ func (n *NumPop) Layout(gtx C, location image.Point) D {
 					v = val
 				}
 				label := material.H4(n.th, fmt.Sprintf("%.3f ", v))
+				if n.Int {
+					label = material.H4(n.th, fmt.Sprintf("%.0f ", v))
+				}
 				label.Alignment = text.End
 				return label.Layout(gtx)
 			}),
@@ -97,6 +102,9 @@ func (n *NumPop) Value() (float64, bool) {
 	// first try the expression as-is
 	val, ok := eval(n.editor.Text())
 	if ok {
+		if n.Int {
+			val = math.Round(val)
+		}
 		return val, true
 	}
 

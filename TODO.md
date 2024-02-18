@@ -49,3 +49,5 @@
  * make the relevant button show the click animation when you press the keyboard shortcut
  * highlight gcode lines in path view when hovered in text view
  * save some reference coordinates, and then "set work offset" or "jog to here" on them
+ * make it so the colours in the toolpath view can distinguish between "machine has moved here", "machine will move here", and "machine has moved here and will move here again"
+ * remember config: jog inc, jog feed, jog rapid, split layout ratios

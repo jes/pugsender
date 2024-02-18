@@ -117,12 +117,11 @@ func (j *JogControl) Update(newKeyState map[string]JogKeyState) {
 
 		axis := j.Axes.Select(axisName)
 		if state == JogKeyPress {
+			needCancel = true
 			if dir == 1 {
 				axis.AddIncremental(j.Increment)
-				axis.UpKeyHeld = false
 			} else {
 				axis.AddIncremental(-j.Increment)
-				axis.DownKeyHeld = false
 			}
 		} else if state == JogKeyRelease {
 			if dir == 1 {
@@ -151,9 +150,8 @@ func (j *JogControl) Update(newKeyState map[string]JogKeyState) {
 		}
 	}
 
-	if needCancel || len(j.Axes.JogCommand()) > 0 {
+	if needCancel {
 		j.Cancel()
-		j.SendJog()
 	}
 }
 

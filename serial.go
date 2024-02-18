@@ -28,7 +28,6 @@ func (a *App) AutoConnect() {
 			<-ticker.C
 			// if we already have a connection, or we don't want to auto-connect, do nothing
 			if !a.gs.Closed || !a.autoConnect {
-				fmt.Println("continue, %s, %s", a.gs.Closed, a.autoConnect)
 				continue
 			}
 

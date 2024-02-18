@@ -27,7 +27,8 @@ func (a *App) AutoConnect() {
 		for {
 			<-ticker.C
 			// if we already have a connection, or we don't want to auto-connect, do nothing
-			if !a.g.Closed || !a.autoConnect {
+			if !a.gs.Closed || !a.autoConnect {
+				fmt.Println("continue, %s, %s", a.gs.Closed, a.autoConnect)
 				continue
 			}
 
@@ -55,12 +56,13 @@ func (a *App) TryToConnect(port string) {
 		return
 	}
 	g := NewGrbl(file, port)
-	go g.Monitor()
+	ch := make(chan GrblStatus)
+	go g.Monitor(ch)
 	select {
-	case <-g.StatusUpdate:
+	case gs := <-ch:
 		// if this port gave us a successful grbl status update, and we still want auto-connection, use this one
-		if !g.Closed && a.g.Closed && a.autoConnect {
-			a.Connect(g)
+		if !gs.Closed && a.gs.Closed && a.autoConnect {
+			a.Connect(g, ch)
 		}
 	case <-time.After(time.Second):
 		// time out after 1 second

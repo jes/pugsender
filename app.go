@@ -52,7 +52,10 @@ func (m Mode) String() string {
 }
 
 type App struct {
-	g           *Grbl
+	g     *Grbl
+	gs    GrblStatus
+	gsNew GrblStatus
+
 	th          *material.Theme
 	w           *app.Window
 	mode        Mode
@@ -109,6 +112,11 @@ func NewApp() *App {
 		th:          th,
 		autoConnect: true,
 	}
+
+	// XXX: grab a "Connecting" GrblStatus
+	a.gsNew = a.g.status
+	a.gs = a.g.status
+
 	a.mdi = NewMDI(a)
 	a.jog = NewJogControl(a)
 	a.tp = NewToolpathView(a)
@@ -121,7 +129,7 @@ func NewApp() *App {
 	a.xDro.Label = "X"
 	a.xDro.TextSize = th.TextSize * 2.16
 	a.xDro.Callback = func(v float64) {
-		w := a.g.Wpos
+		w := a.gs.Wpos
 		w.X = v
 		a.SetWpos(w)
 	}
@@ -129,7 +137,7 @@ func NewApp() *App {
 	a.yDro.Label = "Y"
 	a.yDro.TextSize = th.TextSize * 2.16
 	a.yDro.Callback = func(v float64) {
-		w := a.g.Wpos
+		w := a.gs.Wpos
 		w.Y = v
 		a.SetWpos(w)
 	}
@@ -137,7 +145,7 @@ func NewApp() *App {
 	a.zDro.Label = "Z"
 	a.zDro.TextSize = th.TextSize * 2.16
 	a.zDro.Callback = func(v float64) {
-		w := a.g.Wpos
+		w := a.gs.Wpos
 		w.Z = v
 		a.SetWpos(w)
 	}
@@ -145,7 +153,7 @@ func NewApp() *App {
 	a.aDro.Label = "A"
 	a.aDro.TextSize = th.TextSize * 2.16
 	a.aDro.Callback = func(v float64) {
-		w := a.g.Wpos
+		w := a.gs.Wpos
 		w.A = v
 		a.SetWpos(w)
 	}
@@ -281,7 +289,7 @@ func (a *App) Run() {
 	}
 }
 
-func (a *App) Connect(g *Grbl) {
+func (a *App) Connect(g *Grbl, ch chan GrblStatus) {
 	a.g = g
 	a.ReadConf()
 
@@ -290,23 +298,24 @@ func (a *App) Connect(g *Grbl) {
 		ticker := time.NewTicker(time.Second)
 		for {
 			<-ticker.C
-			if !a.g.Closed {
+			if !a.gs.Closed {
 				a.WriteConf()
 			}
 		}
 	}()
 
-	// receive status updates from grbl
+	// receive status updates from grbl, store in a.gsNew, they'll be
+	// moved into a.gs at the start of the next frame
 	go func() {
 		for {
-			<-a.g.StatusUpdate
-			if a.g.Closed {
+			a.gsNew = <-ch
+			if a.gsNew.Closed {
 				a.ResetMode(ModeConnect)
 			} else if a.mode == ModeConnect {
 				a.ResetMode(ModeJog)
 			}
 			a.w.Invalidate()
-			if a.g.Closed {
+			if a.gsNew.Closed {
 				return
 			}
 		}
@@ -314,6 +323,10 @@ func (a *App) Connect(g *Grbl) {
 }
 
 func (a *App) Layout(gtx C) D {
+	// set the new GrblStatus at the start of Layout(), so that it doesn't
+	// change mid-layout
+	a.gs = a.gsNew
+
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Flexed(1, func(gtx C) D {
 			return a.split1.Layout(gtx, func(gtx C) D {
@@ -473,7 +486,7 @@ func (a *App) KeyPress(e key.Event) {
 				// TODO: undo other operations?
 				// TODO: more levels of undo?
 				if a.canUndo {
-					a.SetWpos(a.g.Mpos.Sub(a.undoWco))
+					a.SetWpos(a.gs.Mpos.Sub(a.undoWco))
 				}
 			} else {
 				a.zDro.ShowEditor()
@@ -538,7 +551,7 @@ func chooseFonts(fonts []font.FontFace) []font.FontFace {
 
 // use this only for WCO changes initiated by the user (i.e. that they might want to undo); otherwise use a.g.SetWpos() directly
 func (a *App) SetWpos(p V4d) {
-	wco := a.g.Wco
+	wco := a.gs.Wco
 	if a.g.SetWpos(p) {
 		// TODO: popup a message saying they can use Ctrl-Z to undo
 		a.undoWco = wco

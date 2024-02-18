@@ -18,11 +18,11 @@ func (a *App) LayoutStatusBar(gtx C) D {
 			layout.Rigid(layout.Spacer{Width: 4}.Layout),
 			layout.Rigid(a.Label(a.mode.String()).Layout),
 			layout.Rigid(layout.Spacer{Width: 4}.Layout),
-			layout.Rigid(a.Label(a.g.PortName).Layout),
+			layout.Rigid(a.Label(a.gs.PortName).Layout),
 			layout.Rigid(layout.Spacer{Width: 4}.Layout),
 			layout.Rigid(a.LayoutBufferState),
 			layout.Rigid(layout.Spacer{Width: 4}.Layout),
-			layout.Rigid(a.Label(fmt.Sprintf("Pn:%s", a.g.Pn)).Layout),
+			layout.Rigid(a.Label(fmt.Sprintf("Pn:%s", a.gs.Pn)).Layout),
 		)
 	})
 }
@@ -33,11 +33,11 @@ func (a *App) LayoutBufferState(gtx C) D {
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx C) D {
 			// planner buffer
-			return LayoutProgressBar(gtx, utilisation(float64(a.g.PlannerSize), float64(a.g.PlannerFree)), th, "PLAN")
+			return LayoutProgressBar(gtx, utilisation(float64(a.gs.PlannerSize), float64(a.gs.PlannerFree)), th, "PLAN")
 		}),
 		layout.Rigid(func(gtx C) D {
 			// serial buffer
-			return LayoutProgressBar(gtx, utilisation(float64(a.g.SerialSize), float64(a.g.SerialFree)), th, "SER")
+			return LayoutProgressBar(gtx, utilisation(float64(a.gs.SerialSize), float64(a.gs.SerialFree)), th, "SER")
 		}),
 	)
 }

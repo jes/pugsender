@@ -66,7 +66,7 @@ func (j *JogControl) Run() {
 	for {
 		<-ticker.C
 
-		j.Axes.Update(j.app.g.Wpos, j.app.g.Vel)
+		j.Axes.Update(j.app.gs.Wpos, j.app.gs.Vel)
 		j.Axes.StepContinuous(j.ActiveFeedRate * j.TickerPeriod.Minutes())
 		j.SendJog()
 	}
@@ -87,7 +87,7 @@ func (j *JogControl) SendJogCommand(line string) bool {
 	if len(line) == 0 {
 		return true
 	}
-	if j.app.g.PlannerFree < 2 {
+	if j.app.gs.PlannerFree < 2 {
 		return false
 	}
 	fmt.Println(line)

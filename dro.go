@@ -21,7 +21,7 @@ func (a *App) LayoutDRO(gtx C) D {
 			layout.Rigid(layout.Spacer{Height: 5}.Layout),
 			layout.Rigid(a.LayoutGCodes),
 			layout.Rigid(func(gtx C) D {
-				return drawGrblModes(a.th, gtx, a.g)
+				return drawGrblModes(a.th, gtx, a.gs)
 			}),
 			layout.Rigid(a.LayoutJogState),
 		)
@@ -29,7 +29,7 @@ func (a *App) LayoutDRO(gtx C) D {
 }
 
 func (a *App) LayoutGrblStatus(gtx C) D {
-	status := a.g.Status
+	status := a.gs.Status
 	if status == "Hold:0" {
 		// Hold complete. Ready to resume.
 		status = "Hold"
@@ -51,7 +51,7 @@ func (a *App) LayoutGrblStatus(gtx C) D {
 }
 
 func (a *App) LayoutDROCoords(gtx C) D {
-	if a.g.Vel.Length() > 0.001 {
+	if a.gs.Vel.Length() > 0.001 {
 		// invalidate the frame if the velocity is non-zero,
 		// because we need to redraw the extrapolated coordinates
 		a.w.Invalidate()
@@ -78,16 +78,16 @@ func (a *App) LayoutFeedSpeed(gtx C) D {
 
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx C) D {
-			return readout.Layout(gtx, " Feed", a.g.FeedRate)
+			return readout.Layout(gtx, " Feed", a.gs.FeedRate)
 		}),
 		layout.Rigid(func(gtx C) D {
-			return readout.Layout(gtx, "Speed", a.g.SpindleSpeed)
+			return readout.Layout(gtx, "Speed", a.gs.SpindleSpeed)
 		}),
 	)
 }
 
 func (a *App) LayoutGCodes(gtx C) D {
-	label := material.H6(a.th, fmt.Sprintf(a.g.GCodes))
+	label := material.H6(a.th, fmt.Sprintf(a.gs.GCodes))
 	return label.Layout(gtx)
 }
 
@@ -111,9 +111,9 @@ func (a *App) LayoutJogState(gtx C) D {
 
 }
 
-func drawGrblModes(th *material.Theme, gtx C, g *Grbl) D {
+func drawGrblModes(th *material.Theme, gtx C, gs GrblStatus) D {
 	probeStr := ""
-	if g.Probe {
+	if gs.Probe {
 		probeStr = "[probe]"
 	}
 	label := material.H5(th, probeStr)

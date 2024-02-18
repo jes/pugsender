@@ -40,10 +40,10 @@ func NewToolpathView(app *App) *ToolpathView {
 }
 
 func (tp *ToolpathView) Layout(gtx C) D {
-	tp.path.Update(tp.app.g.Mpos)
-	tp.path.crossHair = tp.app.g.Mpos
-	tp.path.axes.X = tp.app.g.Wco.X
-	tp.path.axes.Y = tp.app.g.Wco.Y
+	tp.path.Update(tp.app.gs.Mpos)
+	tp.path.crossHair = tp.app.gs.Mpos
+	tp.path.axes.X = tp.app.gs.Wco.X
+	tp.path.axes.Y = tp.app.gs.Wco.Y
 
 	// render the toolpath in a different goroutine so as not to
 	// block the main UI
@@ -81,8 +81,8 @@ func (tp *ToolpathView) LayoutImage(gtx C) D {
 		case pointer.Event:
 			// get click point in work coordinates
 			xMm, yMm := tp.path.PxToMm(float64(gtxE.Position.X), float64(gtxE.Position.Y))
-			xMm -= tp.app.g.Wco.X
-			yMm -= tp.app.g.Wco.Y
+			xMm -= tp.app.gs.Wco.X
+			yMm -= tp.app.gs.Wco.Y
 
 			if gtxE.Kind == pointer.Scroll {
 				tp.path.pxPerMm *= 1.0 - float64(gtxE.Scroll.Y)/100.0
@@ -103,7 +103,7 @@ func (tp *ToolpathView) LayoutImage(gtx C) D {
 						tp.app.jog.JogTo(xMm, yMm)
 					} else if gtxE.Modifiers.Contain(key.ModShift) {
 						// shift-click = set work offset
-						wpos := tp.app.g.Wpos
+						wpos := tp.app.gs.Wpos
 						wpos.X = xMm
 						wpos.Y = yMm
 						tp.app.SetWpos(wpos)
@@ -124,7 +124,7 @@ func (tp *ToolpathView) LayoutImage(gtx C) D {
 		}
 	}
 
-	if tp.app.g.Vel.Length() > 0.001 {
+	if tp.app.gs.Vel.Length() > 0.001 {
 		// invalidate the frame if the velocity is non-zero,
 		// because we need to redraw the plotted path
 		// XXX: we should instead invalidate only when the rendering thread has a new plot to show

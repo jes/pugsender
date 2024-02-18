@@ -22,7 +22,7 @@ func (a *App) WriteConf() {
 	}
 	defer f.Close()
 
-	fmt.Fprintf(f, "wpos=%.3f,%.3f,%.3f,%.3f\n", a.g.Wpos.X, a.g.Wpos.Y, a.g.Wpos.Z, a.g.Wpos.A)
+	fmt.Fprintf(f, "wpos=%.3f,%.3f,%.3f,%.3f\n", a.gs.Wpos.X, a.gs.Wpos.Y, a.gs.Wpos.Z, a.gs.Wpos.A)
 }
 
 func (a *App) ReadConf() {
@@ -47,8 +47,8 @@ func (a *App) ReadConf() {
 
 		if key == "wpos" {
 			a.g.SetWpos(valv4d)
-			a.g.Wpos = valv4d
-			a.g.Wco = a.g.Mpos.Sub(valv4d)
+			a.gs.Wpos = valv4d
+			a.gs.Wco = a.gs.Mpos.Sub(valv4d)
 		} else {
 			fmt.Fprintf(os.Stderr, "%s: unrecognised config key: [%s]\n", filename, key)
 		}

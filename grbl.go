@@ -13,60 +13,28 @@ import (
 )
 
 type Grbl struct {
-	SerialPort       io.ReadWriteCloser
-	PortName         string
-	Ready            bool
-	Closed           bool
-	Status           string
-	Wco              V4d
-	Mpos             V4d
-	Wpos             V4d
-	Dtg              V4d // TODO: how can we calculate this?
-	Vel              V4d
-	PlannerSize      int
-	PlannerFree      int
-	SerialSize       int
-	SerialFree       int
-	SpindleCw        bool
-	SpindleCcw       bool
-	FloodCoolant     bool
-	MistCoolant      bool
-	FeedOverride     float64
-	RapidOverride    float64
-	SpindleOverride  float64
-	FeedRate         float64
-	SpindleSpeed     float64
-	Pn               string
-	Probe            bool
-	StatusUpdate     chan struct{}
-	UpdateTime       time.Time
-	ResponseQueue    []GrblResponse
-	ResponseLock     sync.Mutex
-	GCodes           string
-	GrblConfig       map[int]float64
-	WaitingForGCodes bool
-	Has4thAxis       bool
-	writeChan        chan string
-}
-
-type GrblResponse struct {
-	responseChan chan string
-	command      string
+	serialPort    io.ReadWriteCloser
+	status        GrblStatus
+	responseQueue []GrblResponse
+	responseLock  sync.Mutex
+	writeChan     chan string
 }
 
 func NewGrbl(port io.ReadWriteCloser, portName string) *Grbl {
-	g := &Grbl{
-		SerialPort:   port,
-		PortName:     portName,
-		Status:       "Connecting",
-		StatusUpdate: make(chan struct{}),
-		SerialFree:   128,
-		GrblConfig:   make(map[int]float64),
-		writeChan:    make(chan string, 10),
+	status := GrblStatus{
+		PortName:   portName,
+		Status:     "Connecting",
+		SerialFree: 128,
+		GrblConfig: make(map[int]float64),
 	}
 	if port == nil {
-		g.Status = "Disconnected"
-		g.Closed = true
+		status.Status = "Disconnected"
+		status.Closed = true
+	}
+	g := &Grbl{
+		serialPort: port,
+		status:     status,
+		writeChan:  make(chan string, 10),
 	}
 	return g
 }
@@ -78,7 +46,7 @@ func NewGrbl(port io.ReadWriteCloser, portName string) *Grbl {
 // only use this function for commands that expect a response,
 // use CommandRealtime() for commands that give no response
 func (g *Grbl) Command(line string) chan string {
-	if !g.Ready {
+	if !g.status.Ready {
 		return nil
 	}
 
@@ -87,7 +55,10 @@ func (g *Grbl) Command(line string) chan string {
 
 	// not enough space in Grbl's input buffer? reject the command
 	// +1 because we need to leave at least 1 byte free else Grbl locks up
-	if g.SerialFree <= len(line)+1 {
+	if g.status.SerialFree <= len(line)+1 {
+		// TODO: race condition: we could have multiple threads in this
+		// function at the same time, need to also check SerialFree later
+		// when stuff pops out of g.writeChan
 		return nil
 	}
 
@@ -95,11 +66,11 @@ func (g *Grbl) Command(line string) chan string {
 		responseChan: make(chan string),
 		command:      line,
 	}
-	g.ResponseLock.Lock()
-	g.ResponseQueue = append(g.ResponseQueue, r)
-	g.ResponseLock.Unlock()
+	g.responseLock.Lock()
+	g.responseQueue = append(g.responseQueue, r)
+	g.responseLock.Unlock()
 
-	g.SerialFree -= len(line)
+	g.status.SerialFree -= len(line)
 	g.writeChan <- line
 
 	return r.responseChan
@@ -110,7 +81,7 @@ func (g *Grbl) Command(line string) chan string {
 //
 // spawn a goroutine to consume and ignore the response
 func (g *Grbl) CommandIgnore(line string) bool {
-	if !g.Ready {
+	if !g.status.Ready {
 		return false
 	}
 	c := g.Command(line)
@@ -127,7 +98,7 @@ func (g *Grbl) CommandIgnore(line string) bool {
 // block until the response is received
 // TODO: other threads can still send data while this thread is blocked, which can cause corrupted commands
 func (g *Grbl) CommandWait(line string) (bool, string) {
-	if !g.Ready {
+	if !g.status.Ready {
 		return false, ""
 	}
 	c := g.Command(line)
@@ -141,7 +112,7 @@ func (g *Grbl) CommandWait(line string) (bool, string) {
 // send the given realtime command, return true if successful
 // or false if not
 func (g *Grbl) CommandRealtime(cmd byte) bool {
-	if g.Closed {
+	if g.status.Closed {
 		return false
 	}
 	g.writeChan <- string(cmd)
@@ -150,22 +121,25 @@ func (g *Grbl) CommandRealtime(cmd byte) bool {
 
 // implements io.Closer
 func (g *Grbl) Close() error {
-	if g.Closed {
+	if g.status.Closed {
 		return nil
 	}
-	g.Closed = true
-	g.Ready = false
-	g.Status = "Disconnected"
+	g.status.Closed = true
+	g.status.Ready = false
+	g.status.Status = "Disconnected"
 	var err error
-	if g.SerialPort != nil {
-		err = g.SerialPort.Close()
+	if g.serialPort != nil {
+		err = g.serialPort.Close()
 	}
-	close(g.StatusUpdate)
 	return err
 }
 
-func (g *Grbl) Monitor() {
-	if g.SerialPort == nil {
+func (g *Grbl) Monitor(statusUpdate chan GrblStatus) {
+	if statusUpdate != nil {
+		defer close(statusUpdate)
+	}
+
+	if g.serialPort == nil {
 		g.Close()
 		return
 	}
@@ -207,7 +181,9 @@ loop:
 			}
 
 		case line := <-g.writeChan: // write to grbl
-			_, err := g.SerialPort.Write([]byte(line))
+			// TODO: maybe check buffer space at this point?
+			// (can probably ignore for realtime commands though)
+			_, err := g.serialPort.Write([]byte(line))
 			if err != nil {
 				g.SendResponse(fmt.Sprintf("fail:write error: %v", err))
 				break loop
@@ -216,7 +192,7 @@ loop:
 		case line := <-readChan: // read from grbl
 			if strings.HasPrefix(line, "<") && strings.HasSuffix(line, ">") {
 				// status update
-				g.ParseStatus(line)
+				g.ParseStatus(line, statusUpdate)
 			} else if strings.HasPrefix(line, "[GC:") {
 				// g-codes update
 				g.ParseGCodes(line)
@@ -233,7 +209,7 @@ loop:
 					fmt.Fprintf(os.Stderr, "%s: strconv.ParseFloat(%s): %v\n", line, vals[2], err)
 					continue loop
 				}
-				g.GrblConfig[int(key)] = val
+				g.status.GrblConfig[int(key)] = val
 			} else if strings.HasPrefix(line, "ok") || strings.HasPrefix(line, "error") {
 				g.SendResponse(line)
 			}
@@ -243,7 +219,7 @@ loop:
 
 // read lines from the serial port and put then on channel c
 func (g *Grbl) readSerial(c chan string) {
-	scanner := bufio.NewScanner(g.SerialPort)
+	scanner := bufio.NewScanner(g.serialPort)
 	for scanner.Scan() {
 		c <- scanner.Text()
 	}
@@ -257,20 +233,20 @@ func (g *Grbl) RequestStatusUpdate() bool {
 
 // request active gcodes, return true if ok or false if not
 func (g *Grbl) RequestGCodes() bool {
-	if g.Closed {
+	if g.status.Closed {
 		return false
 	}
-	if !g.Ready {
+	if !g.status.Ready {
 		return true
 	}
-	if g.WaitingForGCodes {
+	if g.status.WaitingForGCodes {
 		// don't have more than one request in-flight at any time
 		return true
 	}
-	g.WaitingForGCodes = true
+	g.status.WaitingForGCodes = true
 	// TODO: also request gcodes whenever we think they might have changed?
 	ok := g.CommandIgnore("$G")
-	if !ok && g.Closed {
+	if !ok && g.status.Closed {
 		return false
 	}
 	return true
@@ -282,22 +258,22 @@ func (g *Grbl) RequestGrblConfig() bool {
 
 // "status" should be a status report line from Grbl
 // send a struct{} to the StatusUpdate channel whenever there isa new status report
-func (g *Grbl) ParseStatus(status string) {
-	g.Ready = true
+func (g *Grbl) ParseStatus(status string, ch chan GrblStatus) {
+	g.status.Ready = true
 
-	prevMpos := g.Mpos
-	prevUpdateTime := g.UpdateTime
+	prevMpos := g.status.Mpos
+	prevUpdateTime := g.status.UpdateTime
 
 	status = strings.Trim(status, "<>")
 	parts := strings.Split(status, "|")
-	g.Status = parts[0]
+	g.status.Status = parts[0]
 
-	if g.GCodes == "" {
+	if g.status.GCodes == "" {
 		// at startup, get the active g-codes without having to wait for the timer to fire
 		g.RequestGCodes()
 	}
 
-	if len(g.GrblConfig) == 0 {
+	if len(g.status.GrblConfig) == 0 {
 		// at startup, grab the grbl config
 		g.RequestGrblConfig()
 	}
@@ -323,39 +299,39 @@ func (g *Grbl) ParseStatus(status string) {
 
 		if keylc == "wpos" { // work position
 			givenWpos = true
-			g.Wpos = valv4d
+			g.status.Wpos = valv4d
 		} else if keylc == "mpos" { // machine position
 			givenMpos = true
-			g.Mpos = valv4d
+			g.status.Mpos = valv4d
 		} else if keylc == "wco" { // work coordinate offset
-			g.Wco = valv4d
-			g.Has4thAxis = (axes == 4)
+			g.status.Wco = valv4d
+			g.status.Has4thAxis = (axes == 4)
 		} else if keylc == "ov" { // overrides
-			g.FeedOverride = valv4d.X
-			g.RapidOverride = valv4d.X
-			g.SpindleOverride = valv4d.X
+			g.status.FeedOverride = valv4d.X
+			g.status.RapidOverride = valv4d.X
+			g.status.SpindleOverride = valv4d.X
 		} else if keylc == "a" { // accessories
-			g.SpindleCw = strings.Contains(val, "S")
-			g.SpindleCcw = strings.Contains(val, "C")
-			g.FloodCoolant = strings.Contains(val, "F")
-			g.MistCoolant = strings.Contains(val, "M")
+			g.status.SpindleCw = strings.Contains(val, "S")
+			g.status.SpindleCcw = strings.Contains(val, "C")
+			g.status.FloodCoolant = strings.Contains(val, "F")
+			g.status.MistCoolant = strings.Contains(val, "M")
 		} else if keylc == "bf" { // buffers
-			g.PlannerFree = int(valv4d.X)
+			g.status.PlannerFree = int(valv4d.X)
 			serialFree := int(valv4d.Y)
-			if serialFree != g.SerialFree {
-				fmt.Fprintf(os.Stderr, "BUG?? serial buffer space out of sync: we thought %d bytes free, but Grbl reports %d\n", g.SerialFree, serialFree)
+			if serialFree != g.status.SerialFree {
+				fmt.Fprintf(os.Stderr, "BUG?? serial buffer space out of sync: we thought %d bytes free, but Grbl reports %d\n", g.status.SerialFree, serialFree)
 			}
-			if g.PlannerFree > g.PlannerSize {
-				g.PlannerSize = g.PlannerFree
+			if g.status.PlannerFree > g.status.PlannerSize {
+				g.status.PlannerSize = g.status.PlannerFree
 			}
-			if serialFree > g.SerialSize {
-				g.SerialSize = serialFree
+			if serialFree > g.status.SerialSize {
+				g.status.SerialSize = serialFree
 			}
 		} else if keylc == "fs" { // feed/speed
-			g.FeedRate = valv4d.X
-			g.SpindleSpeed = valv4d.Y
+			g.status.FeedRate = valv4d.X
+			g.status.SpindleSpeed = valv4d.Y
 		} else if keylc == "f" { // feed rate
-			g.FeedRate = valv4d.X
+			g.status.FeedRate = valv4d.X
 		} else if keylc == "pn" { // pins
 			newProbeState = strings.Contains(val, "P")
 			newPn = val
@@ -364,75 +340,75 @@ func (g *Grbl) ParseStatus(status string) {
 		}
 	}
 
-	g.Probe = newProbeState
-	g.Pn = newPn
+	g.status.Probe = newProbeState
+	g.status.Pn = newPn
 
-	// TODO: race window between updating WCO and updating MPos,
-	// probably want to make use accessor functions with a mutex
 	if givenMpos {
-		g.Wpos = g.Mpos.Sub(g.Wco)
+		g.status.Wpos = g.status.Mpos.Sub(g.status.Wco)
 	} else if givenWpos {
-		g.Mpos = g.Wpos.Add(g.Wco)
+		g.status.Mpos = g.status.Wpos.Add(g.status.Wco)
 	}
 
-	g.UpdateTime = time.Now()
+	g.status.UpdateTime = time.Now()
 
-	distanceMoved := g.Mpos.Sub(prevMpos)
-	g.Vel = distanceMoved.Div(g.UpdateTime.Sub(prevUpdateTime).Minutes())
+	distanceMoved := g.status.Mpos.Sub(prevMpos)
+	g.status.Vel = distanceMoved.Div(g.status.UpdateTime.Sub(prevUpdateTime).Minutes())
 
-	// send a status update if anyone is waiting for one (what if multiple readers?)
-	select {
-	case g.StatusUpdate <- struct{}{}:
-	default:
+	if ch != nil {
+		// send a status update unless doing so would block
+		select {
+		case ch <- g.status:
+		default:
+		}
 	}
 }
 
 func (g *Grbl) ParseGCodes(line string) {
-	g.GCodes = strings.TrimRight(strings.TrimPrefix(line, "[GC:"), "]")
-	g.WaitingForGCodes = false
+	g.status.GCodes = strings.TrimRight(strings.TrimPrefix(line, "[GC:"), "]")
+	g.status.WaitingForGCodes = false
 }
 
 func (g *Grbl) SendResponse(line string) {
-	l := len(g.ResponseQueue)
+	l := len(g.responseQueue)
 	if l == 0 {
 		fmt.Fprintf(os.Stderr, "BUG: wanted to send a command response, but no channels are waiting; this means the sender is out of sync\n")
 		return
 	}
 
-	g.ResponseLock.Lock()
-	r := g.ResponseQueue[0]
-	g.ResponseQueue = g.ResponseQueue[1:]
-	g.ResponseLock.Unlock()
+	g.responseLock.Lock()
+	r := g.responseQueue[0]
+	g.responseQueue = g.responseQueue[1:]
+	g.responseLock.Unlock()
 
 	if strings.HasPrefix(line, "error") {
 		fmt.Printf("[%s]: %s\n", r.command, line)
 	}
 
-	g.SerialFree += len(r.command)
+	g.status.SerialFree += len(r.command)
 	r.responseChan <- line
 	close(r.responseChan)
 }
 
 func (g *Grbl) AbortCommands() {
-	g.ResponseLock.Lock()
-	defer g.ResponseLock.Unlock()
+	g.responseLock.Lock()
+	defer g.responseLock.Unlock()
 
-	for _, r := range g.ResponseQueue {
+	for _, r := range g.responseQueue {
 		r.responseChan <- "fail:aborted"
 	}
-	g.ResponseQueue = make([]GrblResponse, 0)
+	g.responseQueue = make([]GrblResponse, 0)
 }
 
 // extrapolated Wpos
 func (g *Grbl) WposExt() V4d {
-	dt := time.Now().Sub(g.UpdateTime)
-	return g.Wpos.Add(g.Vel.Mul(dt.Minutes()))
+	dt := time.Now().Sub(g.status.UpdateTime)
+	return g.status.Wpos.Add(g.status.Vel.Mul(dt.Minutes()))
 }
 
 // extrapolated Mpos
 func (g *Grbl) MposExt() V4d {
-	dt := time.Now().Sub(g.UpdateTime)
-	return g.Mpos.Add(g.Vel.Mul(dt.Minutes()))
+	dt := time.Now().Sub(g.status.UpdateTime)
+	return g.status.Mpos.Add(g.status.Vel.Mul(dt.Minutes()))
 }
 
 func (g *Grbl) SetWpos(p V4d) bool {
@@ -441,12 +417,12 @@ func (g *Grbl) SetWpos(p V4d) bool {
 	// we need to wait until a G10 is acknowledged before proceeding
 	// TODO: maybe g.Command should detect if the command implies EEPROM
 	// access and if so block until it is completed automatically?
-	if g.Status != "Idle" {
+	if g.status.Status != "Idle" {
 		// only allow setting WCO in Idle state
 		return false
 	}
 	line := fmt.Sprintf("G10L20P1X%.3fY%.3fZ%.3f", p.X, p.Y, p.Z)
-	if g.Has4thAxis {
+	if g.status.Has4thAxis {
 		line += fmt.Sprintf("A%.3f", p.A)
 	}
 	ok, _ := g.CommandWait(line)

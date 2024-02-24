@@ -79,6 +79,7 @@ type App struct {
 	drainBtn  *widget.Clickable
 	singleBtn *widget.Clickable
 	unlockBtn *widget.Clickable
+	m1Btn     *widget.Clickable
 
 	tp *ToolpathView
 
@@ -204,6 +205,7 @@ func NewApp() *App {
 	a.drainBtn = new(widget.Clickable)
 	a.singleBtn = new(widget.Clickable)
 	a.unlockBtn = new(widget.Clickable)
+	a.m1Btn = new(widget.Clickable)
 
 	var err error
 	a.img, err = loadImage("pugs.png")
@@ -401,6 +403,9 @@ func (a *App) LayoutButtons(gtx C) D {
 	for a.unlockBtn.Clicked(gtx) {
 		a.AlarmUnlock()
 	}
+	for a.m1Btn.Clicked(gtx) {
+		a.gcodeRunnerChan <- CmdOptionalStop
+	}
 
 	return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 		layout.Rigid(func(gtx C) D {
@@ -420,6 +425,13 @@ func (a *App) LayoutButtons(gtx C) D {
 		}),
 		layout.Rigid(func(gtx C) D {
 			return layout.UniformInset(5).Layout(gtx, material.Button(a.th, a.unlockBtn, "UNLOCK").Layout)
+		}),
+		layout.Rigid(func(gtx C) D {
+			lbl := "+M1"
+			if a.gcode.optionalStop {
+				lbl = "-M1"
+			}
+			return layout.UniformInset(5).Layout(gtx, material.Button(a.th, a.m1Btn, lbl).Layout)
 		}),
 	)
 }

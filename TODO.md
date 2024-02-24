@@ -54,5 +54,4 @@
  * keyboard shortcuts for overrides
  * stash override settings in some "register", and restore/revert on some macro keypress (maybe make this even more powerful, so it can do other things too)
  * stash grbl config and allow restore (and save to file?)
- * M1 optional stop
  * drain on tool change, and allow touching off

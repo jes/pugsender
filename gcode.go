@@ -16,8 +16,7 @@ const (
 	CmdPause
 	CmdDrain
 	CmdSingle
-	CmdOptionalStopEnable
-	CmdOptionalStopDisable
+	CmdOptionalStop
 )
 
 type RunnerCmd int
@@ -74,6 +73,7 @@ func (r *GCodeRunner) Run(ch chan RunnerCmd) {
 
 			case CmdStop:
 				r.running = false
+				r.nextLine = 0
 				// TODO: send a feed hold now, and only send the soft reset once the status is "Hold:2" or whatever
 				r.SoftReset()
 
@@ -91,11 +91,8 @@ func (r *GCodeRunner) Run(ch chan RunnerCmd) {
 				r.running = false
 				r.CycleStart()
 
-			case CmdOptionalStopEnable:
-				r.optionalStop = true
-
-			case CmdOptionalStopDisable:
-				r.optionalStop = false
+			case CmdOptionalStop:
+				r.optionalStop = !r.optionalStop
 			}
 
 		case resp := <-respChan:
@@ -124,6 +121,11 @@ func (r *GCodeRunner) Run(ch chan RunnerCmd) {
 				// how else do we display up-to-date G codes?)
 				r.app.g.RequestGCodes()
 			} else {
+				// program is complete
+				// TODO: only reset r.nextLine once we're back in "Idle" status
+				r.running = false
+				r.nextLine = 0
+
 				if r.app.mode == ModeRun {
 					r.app.PopMode()
 				}

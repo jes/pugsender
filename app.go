@@ -91,8 +91,7 @@ type App struct {
 	split1 Split
 	split2 Split
 
-	gcode           []string
-	nextLine        int
+	gcode           *GCodeRunner
 	gcodeRunnerChan chan RunnerCmd
 
 	img image.Image
@@ -114,6 +113,8 @@ func NewApp() *App {
 		autoConnect:     true,
 		gcodeRunnerChan: make(chan RunnerCmd),
 	}
+
+	a.gcode = NewGCodeRunner(a)
 
 	a.gsNew = DefaultGrblStatus()
 
@@ -221,7 +222,7 @@ func NewApp() *App {
 
 func (a *App) Run() {
 	go a.jog.Run()
-	go a.GcodeRunner(a.gcodeRunnerChan)
+	go a.gcode.Run(a.gcodeRunnerChan)
 
 	var ops op.Ops
 
@@ -377,6 +378,10 @@ func (a *App) Layout(gtx C) D {
 	)
 }
 
+func (a *App) AlarmUnlock() {
+	a.g.CommandIgnore("$X")
+}
+
 func (a *App) LayoutButtons(gtx C) D {
 	for a.startBtn.Clicked(gtx) {
 		a.gcodeRunnerChan <- CmdStart
@@ -494,7 +499,7 @@ func (a *App) KeyPress(e key.Event) {
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "explorer.ChooseFile(): %v\n", err)
 				} else {
-					a.LoadGCode(f)
+					a.gcode.Load(f)
 				}
 			}()
 		} else if e.Name == "I" {
@@ -508,11 +513,11 @@ func (a *App) KeyPress(e key.Event) {
 
 	if a.mode == ModeJog || a.mode == ModeRun {
 		if e.Name == "H" {
-			a.FeedHold()
+			a.gcodeRunnerChan <- CmdPause
 		} else if e.Name == "R" {
-			a.SoftReset()
+			a.gcodeRunnerChan <- CmdStop
 		} else if e.Name == "S" {
-			a.CycleStart()
+			a.gcodeRunnerChan <- CmdStart
 		} else if e.Name == "U" {
 			a.AlarmUnlock()
 		}

@@ -16,32 +16,48 @@ const (
 	CmdPause
 	CmdDrain
 	CmdSingle
+	CmdOptionalStopEnable
+	CmdOptionalStopDisable
 )
 
 type RunnerCmd int
 
-func (a *App) LoadGCode(r io.Reader) {
+type GCodeRunner struct {
+	app      *App
+	gcode    []string
+	nextLine int
+
+	running      bool
+	optionalStop bool
+}
+
+func NewGCodeRunner(app *App) *GCodeRunner {
+	return &GCodeRunner{app: app}
+}
+
+func (r *GCodeRunner) Load(reader io.Reader) {
 	gcode := make([]string, 0)
 
-	scanner := bufio.NewScanner(r)
+	scanner := bufio.NewScanner(reader)
 
 	for scanner.Scan() {
 		line := scanner.Text()
 		gcode = append(gcode, line)
 	}
 
-	a.gcode = gcode
-	a.nextLine = 0
+	r.gcode = gcode
+	r.nextLine = 0
 
-	// TODO: this is plotted in the wrong place unless WCO=0
-	a.tp.path.SetGCode(GCodeToPath(a.gcode))
+	r.app.tp.path.SetGCode(r.Path())
 }
 
 // TODO: the gcode runner should be attached to the gcode itself,
 // and created and destroyed as/when new gcode files are loaded, to
 // fix the issue of ownership of the gcode
-func (a *App) GcodeRunner(ch chan RunnerCmd) {
-	running := false
+func (r *GCodeRunner) Run(ch chan RunnerCmd) {
+	r.running = false
+	r.optionalStop = true
+
 	waiting := 0
 
 	respChan := make(chan string)
@@ -53,28 +69,33 @@ func (a *App) GcodeRunner(ch chan RunnerCmd) {
 		case cmd := <-ch:
 			switch cmd {
 			case CmdStart:
-				running = true
-				a.CycleStart()
+				r.running = true
+				r.CycleStart()
 
 			case CmdStop:
-				running = false
+				r.running = false
 				// TODO: send a feed hold now, and only send the soft reset once the status is "Hold:2" or whatever
-				a.SoftReset()
+				r.SoftReset()
 
 			case CmdPause:
-				running = false
-				a.FeedHold()
+				r.running = false
+				r.FeedHold()
 
 			case CmdDrain:
 				// drain the planner buffer by not sending any more lines, but CycleStart
-				running = false
-				a.CycleStart()
+				r.running = false
+				r.CycleStart()
 
 			case CmdSingle:
 				sendLine = true
-				running = false
-				a.CycleStart()
+				r.running = false
+				r.CycleStart()
 
+			case CmdOptionalStopEnable:
+				r.optionalStop = true
+
+			case CmdOptionalStopDisable:
+				r.optionalStop = false
 			}
 
 		case resp := <-respChan:
@@ -83,52 +104,53 @@ func (a *App) GcodeRunner(ch chan RunnerCmd) {
 			waiting--
 		}
 
-		if sendLine || (running && waiting == 0) {
-			if a.nextLine < len(a.gcode) {
-				line := a.gcode[a.nextLine]
-				a.nextLine += 1
+		if sendLine || (r.running && waiting == 0) {
+			if r.nextLine < len(r.gcode) {
+				line := r.gcode[r.nextLine]
+				r.nextLine += 1
+
+				if r.optionalStop && line == "M1" {
+					// turn M1 into M0 if optionalStop
+					line = "M0"
+				}
 
 				fmt.Printf("> [%s]\n", line)
 				// TODO: use the character-counting method instead of waiting for a response?
-				if a.g.Command(line, respChan) {
+				if r.app.g.Command(line, respChan) {
 					waiting++
 				}
 
 				// TODO: stop requesting G codes after every command (but
 				// how else do we display up-to-date G codes?)
-				a.g.RequestGCodes()
+				r.app.g.RequestGCodes()
 			} else {
-				if a.mode == ModeRun {
-					a.PopMode()
+				if r.app.mode == ModeRun {
+					r.app.PopMode()
 				}
 			}
 		}
 	}
 }
 
-func (a *App) CycleStart() {
-	a.g.CommandRealtime('~')
+func (r *GCodeRunner) CycleStart() {
+	r.app.g.CommandRealtime('~')
 }
 
-func (a *App) SoftReset() {
-	a.g.AbortCommands()
-	a.g.CommandRealtime(0x18)
+func (r *GCodeRunner) SoftReset() {
+	r.app.g.AbortCommands()
+	r.app.g.CommandRealtime(0x18)
 }
 
-func (a *App) FeedHold() {
-	a.g.CommandRealtime('!')
+func (r *GCodeRunner) FeedHold() {
+	r.app.g.CommandRealtime('!')
 }
 
-func (a *App) AlarmUnlock() {
-	a.g.CommandIgnore("$X")
-}
-
-func GCodeToPath(lines []string) []V4d {
+func (r *GCodeRunner) Path() []V4d {
 	pos := V4d{}
 
 	path := make([]V4d, 0)
 
-	for _, str := range lines {
+	for _, str := range r.gcode {
 		line, err := gcode.ParseLine(str)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error parsing gcode line: [%s]: %s, ignoring\n", str, err)

@@ -16,11 +16,11 @@ type Toolbar struct {
 // Layout a list of widgets in a toolbar.
 // Derived from layout.Flex.Layout()
 func (t Toolbar) Layout(gtx C, children ...layout.Widget) D {
-	size := 0
 	cs := gtx.Constraints
 	cgtx := gtx
 	childCall := make([]op.CallOp, len(children))
 	childDims := make([]D, len(children))
+	maxHeight := cs.Min.Y
 
 	// Lay out Rigid children.
 	for i, child := range children {
@@ -28,17 +28,11 @@ func (t Toolbar) Layout(gtx C, children ...layout.Widget) D {
 		cgtx.Constraints = layout.Constraints{Min: image.Pt(0, cs.Min.Y), Max: image.Pt(cs.Max.X, cs.Max.Y)}
 		dims := t.Inset.Layout(cgtx, child)
 		c := macro.Stop()
-		sz := layout.Horizontal.Convert(dims.Size).X
-		size += sz
+		if h := layout.Horizontal.Convert(dims.Size).Y; h > maxHeight {
+			maxHeight = h
+		}
 		childCall[i] = c
 		childDims[i] = dims
-	}
-
-	maxHeight := cs.Min.Y
-	for i := range children {
-		if c := layout.Horizontal.Convert(childDims[i].Size).Y; c > maxHeight {
-			maxHeight = c
-		}
 	}
 
 	xOffset, yOffset := 0, 0

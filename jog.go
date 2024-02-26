@@ -73,6 +73,9 @@ func (j *JogControl) Run() {
 }
 
 func (j *JogControl) SendJog() {
+	if !j.app.CanJog() {
+		return
+	}
 	cmd := j.Axes.JogCommand()
 	if len(cmd) == 0 {
 		return

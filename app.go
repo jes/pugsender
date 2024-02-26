@@ -270,7 +270,7 @@ func (a *App) Run() {
 			}
 
 			// update jog control
-			if a.mode == ModeJog {
+			if a.mode == ModeJog && a.CanJog() {
 				a.jog.Update(keystate)
 			}
 
@@ -633,4 +633,9 @@ func (a *App) EditorHidden() {
 	if a.mode == ModeNum {
 		a.PopMode()
 	}
+}
+
+func (a *App) CanJog() bool {
+	// we can jog if grbl is in "Idle" or "Jog" status
+	return a.gs.Status == "Idle" || a.gs.Status == "Jog"
 }

@@ -50,10 +50,6 @@
  * stash override settings in some "register", and restore/revert on some macro keypress (maybe make this even more powerful, so it can do other things too)
  * click on "Alarm" label to unlock (maybe also overlay "click to unlock")
 
-## Jog control
-
- * don't attempt jogging while mode is not "idle" or "jog"?
-
 ## MDI
 
  * history search

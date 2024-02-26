@@ -77,7 +77,11 @@ func (tp *ToolpathView) Layout(gtx C) D {
 					)
 				}),
 				layout.Stacked(func(gtx C) D {
-					return material.H6(tp.app.th, " Ctrl-click = jog\nShift-click = set WCO").Layout(gtx)
+					label := " Ctrl-click = jog\nShift-click = set WCO"
+					if !tp.app.CanJog() {
+						label = ""
+					}
+					return material.H6(tp.app.th, label).Layout(gtx)
 				}),
 			)
 		} else {

@@ -63,10 +63,17 @@ func (tp *ToolpathView) Layout(gtx C) D {
 		tp.path.widthPx = gtx.Constraints.Min.X
 		tp.path.heightPx = gtx.Constraints.Min.Y
 		if tp.hovering {
-			return layout.Stack{Alignment: layout.SE}.Layout(gtx,
-				layout.Expanded(tp.LayoutImage),
+			return layout.Stack{Alignment: layout.NE}.Layout(gtx,
+				layout.Expanded(func(gtx C) D {
+					return layout.Stack{Alignment: layout.SE}.Layout(gtx,
+						layout.Expanded(tp.LayoutImage),
+						layout.Stacked(func(gtx C) D {
+							return material.H6(tp.app.th, fmt.Sprintf("X%.03f Y%.03f", tp.hoverPoint.X, tp.hoverPoint.Y)).Layout(gtx)
+						}),
+					)
+				}),
 				layout.Stacked(func(gtx C) D {
-					return material.H6(tp.app.th, fmt.Sprintf("X%.03f Y%.03f", tp.hoverPoint.X, tp.hoverPoint.Y)).Layout(gtx)
+					return material.H6(tp.app.th, " Ctrl-click = jog\nShift-click = set WCO").Layout(gtx)
 				}),
 			)
 		} else {

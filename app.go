@@ -408,7 +408,7 @@ func (a *App) LayoutButtons(gtx C) D {
 		m1Lbl = "-M1"
 	}
 
-	return Toolbar{}.Layout(gtx,
+	return Toolbar{Inset: layout.UniformInset(5)}.Layout(gtx,
 		material.Button(a.th, a.startBtn, "START").Layout,
 		material.Button(a.th, a.holdBtn, "HOLD").Layout,
 		material.Button(a.th, a.resetBtn, "RESET").Layout,

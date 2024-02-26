@@ -57,6 +57,7 @@ func (g *Grbl) Command(line string, respChan chan string) bool {
 	// not enough space in Grbl's input buffer? reject the command
 	// +1 because we need to leave at least 1 byte free else Grbl locks up
 	if g.status.SerialFree <= len(line)+1 {
+		fmt.Fprintf(os.Stderr, "not running command because serial is full: %s\n", line)
 		return false
 	}
 
@@ -174,6 +175,7 @@ loop:
 
 		case r := <-g.writeChan: // write to grbl
 			if g.status.SerialFree < len(r.command) {
+				fmt.Fprintf(os.Stderr, "(in writechan) not running command because serial is full: %s\n", r.command)
 				if r.responseChan != nil {
 					r.responseChan <- "fail:buffer full"
 				}
@@ -376,7 +378,7 @@ func (g *Grbl) ParseGCodes(line string) {
 func (g *Grbl) SendResponse(line string) {
 	l := len(g.responseQueue)
 	if l == 0 {
-		fmt.Fprintf(os.Stderr, "BUG: wanted to send a command response, but no channels are waiting; this means the sender is out of sync\n")
+		fmt.Fprintf(os.Stderr, "BUG: wanted to send a command response, but no channels are waiting; this means the sender is out of sync: %s\n", line)
 		return
 	}
 

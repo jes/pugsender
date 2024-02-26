@@ -338,6 +338,11 @@ func (a *App) Connect(g *Grbl, ch chan GrblStatus) {
 			if a.gsNew.Closed {
 				return
 			}
+
+			if a.gcode.stopping {
+				// XXX: let the gcode runner discover a "Hold:0" status
+				a.gcodeRunnerChan <- CmdNone
+			}
 		}
 	}()
 }

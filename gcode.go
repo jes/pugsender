@@ -27,6 +27,7 @@ type GCodeRunner struct {
 	nextLine int
 
 	running      bool
+	stopping     bool
 	optionalStop bool
 }
 
@@ -65,6 +66,7 @@ func (r *GCodeRunner) Run(ch chan RunnerCmd) {
 		case cmd := <-ch:
 			switch cmd {
 			case CmdStart:
+				// start running gcode
 				r.running = true
 				if r.nextLine > len(r.gcode) {
 					// reset to start if run was previously completed
@@ -73,11 +75,13 @@ func (r *GCodeRunner) Run(ch chan RunnerCmd) {
 				r.CycleStart()
 
 			case CmdStop:
+				// send a feed hold now, and a soft-reset once the status is "Hold:0"
 				r.running = false
-				r.nextLine = 0
-				r.SoftReset()
+				r.stopping = true
+				r.FeedHold()
 
 			case CmdPause:
+				// feed hold
 				r.running = false
 				r.FeedHold()
 
@@ -87,11 +91,13 @@ func (r *GCodeRunner) Run(ch chan RunnerCmd) {
 				r.CycleStart()
 
 			case CmdSingle:
+				// force send a single line only
 				sendLine = true
 				r.running = false
 				r.CycleStart()
 
 			case CmdOptionalStop:
+				// toggle optional stopping
 				r.optionalStop = !r.optionalStop
 			}
 
@@ -101,6 +107,13 @@ func (r *GCodeRunner) Run(ch chan RunnerCmd) {
 				r.FeedHold()
 			}
 			waiting--
+		}
+
+		if r.stopping && r.app.gs.Status == "Hold:0" {
+			r.SoftReset()
+			r.stopping = false
+			r.running = false
+			r.nextLine = 0
 		}
 
 		if sendLine || (r.running && waiting == 0) {

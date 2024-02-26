@@ -41,8 +41,10 @@ func (a *App) LayoutGrblStatus(gtx C) D {
 	}
 
 	bgCol := grey(32)
-	if status == "Idle" {
+	if status == "Idle" || status == "Run" {
 		bgCol = rgb(32, 64, 32)
+	} else if status == "Jog" {
+		bgCol = rgb(64, 64, 32)
 	} else if status == "Alarm" {
 		bgCol = rgb(64, 32, 32)
 	}

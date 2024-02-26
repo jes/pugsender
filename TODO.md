@@ -6,7 +6,6 @@
  * make keyboard shortcuts more sensible
  * make a cheatsheet of keyboard shortcuts
  * fix deadlocks
- * if jog inc/feed numpop would overflow bottom of screen, draw it further up
 
 # Nice-to-have
 
@@ -49,6 +48,7 @@
  * keyboard shortcuts for overrides
  * stash override settings in some "register", and restore/revert on some macro keypress (maybe make this even more powerful, so it can do other things too)
  * click on "Alarm" label to unlock (maybe also overlay "click to unlock")
+ * if jog inc/feed numpop would overflow bottom of screen, draw it further up
 
 ## MDI
 

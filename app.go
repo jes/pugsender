@@ -403,32 +403,19 @@ func (a *App) LayoutButtons(gtx C) D {
 		a.gcodeRunnerChan <- CmdOptionalStop
 	}
 
-	return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
-		layout.Rigid(func(gtx C) D {
-			return layout.UniformInset(5).Layout(gtx, material.Button(a.th, a.startBtn, "START").Layout)
-		}),
-		layout.Rigid(func(gtx C) D {
-			return layout.UniformInset(5).Layout(gtx, material.Button(a.th, a.holdBtn, "HOLD").Layout)
-		}),
-		layout.Rigid(func(gtx C) D {
-			return layout.UniformInset(5).Layout(gtx, material.Button(a.th, a.resetBtn, "RESET").Layout)
-		}),
-		layout.Rigid(func(gtx C) D {
-			return layout.UniformInset(5).Layout(gtx, material.Button(a.th, a.drainBtn, "DRAIN").Layout)
-		}),
-		layout.Rigid(func(gtx C) D {
-			return layout.UniformInset(5).Layout(gtx, material.Button(a.th, a.singleBtn, "SINGLE").Layout)
-		}),
-		layout.Rigid(func(gtx C) D {
-			return layout.UniformInset(5).Layout(gtx, material.Button(a.th, a.unlockBtn, "UNLOCK").Layout)
-		}),
-		layout.Rigid(func(gtx C) D {
-			lbl := "+M1"
-			if a.gcode.optionalStop {
-				lbl = "-M1"
-			}
-			return layout.UniformInset(5).Layout(gtx, material.Button(a.th, a.m1Btn, lbl).Layout)
-		}),
+	m1Lbl := "+M1"
+	if a.gcode.optionalStop {
+		m1Lbl = "-M1"
+	}
+
+	return Toolbar{}.Layout(gtx,
+		material.Button(a.th, a.startBtn, "START").Layout,
+		material.Button(a.th, a.holdBtn, "HOLD").Layout,
+		material.Button(a.th, a.resetBtn, "RESET").Layout,
+		material.Button(a.th, a.drainBtn, "DRAIN").Layout,
+		material.Button(a.th, a.singleBtn, "SINGLE").Layout,
+		material.Button(a.th, a.unlockBtn, "UNLOCK").Layout,
+		material.Button(a.th, a.m1Btn, m1Lbl).Layout,
 	)
 }
 

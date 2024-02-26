@@ -68,7 +68,11 @@ func (tp *ToolpathView) Layout(gtx C) D {
 					return layout.Stack{Alignment: layout.SE}.Layout(gtx,
 						layout.Expanded(tp.LayoutImage),
 						layout.Stacked(func(gtx C) D {
-							return material.H6(tp.app.th, fmt.Sprintf("X%.03f Y%.03f", tp.hoverPoint.X, tp.hoverPoint.Y)).Layout(gtx)
+							// get hover point in work coordinates
+							xMm, yMm := tp.path.PxToMm(tp.hoverPoint.X, tp.hoverPoint.Y)
+							xMm -= tp.app.gs.Wco.X
+							yMm -= tp.app.gs.Wco.Y
+							return material.H6(tp.app.th, fmt.Sprintf("X%.03f Y%.03f", xMm, yMm)).Layout(gtx)
 						}),
 					)
 				}),
@@ -87,7 +91,7 @@ func (tp *ToolpathView) LayoutImage(gtx C) D {
 		switch gtxE := gtxEvent.(type) {
 		case pointer.Event:
 			// get click point in work coordinates
-			xMm, yMm := tp.path.PxToMm(float64(gtxE.Position.X), float64(gtxE.Position.Y))
+			xMm, yMm := tp.path.PxToMm(tp.hoverPoint.X, tp.hoverPoint.Y)
 			xMm -= tp.app.gs.Wco.X
 			yMm -= tp.app.gs.Wco.Y
 
@@ -126,7 +130,10 @@ func (tp *ToolpathView) LayoutImage(gtx C) D {
 			if tp.dragging {
 				tp.hoverPoint = tp.dragPoint
 			} else {
-				tp.hoverPoint = V4d{X: xMm, Y: yMm}
+				// store hoverPoint in pixels, and convert to mm at rendering time, so that
+				// when the WCO changes without any mouse events we draw the new work
+				// coordinates
+				tp.hoverPoint = V4d{X: float64(gtxE.Position.X), Y: float64(gtxE.Position.Y)}
 			}
 		}
 	}

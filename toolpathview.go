@@ -141,12 +141,6 @@ func (tp *ToolpathView) LayoutImage(gtx C) D {
 		}
 	}
 
-	if tp.app.gs.Vel.Length() > 0.001 {
-		// invalidate the frame if the velocity is non-zero,
-		// because we need to redraw the plotted path
-		// XXX: we should instead invalidate only when the rendering thread has a new plot to show
-		tp.app.w.Invalidate()
-	}
 	im := widget.Image{
 		Src:   tp.imageOp,
 		Scale: 1.0 / gtx.Metric.PxPerDp,

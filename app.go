@@ -129,7 +129,6 @@ func NewApp() *App {
 
 	a.xDro.app = a
 	a.xDro.Label = "X"
-	a.xDro.TextSize = th.TextSize * 2.16
 	a.xDro.Callback = func(v float64) {
 		w := a.gs.Wpos
 		w.X = v
@@ -137,7 +136,6 @@ func NewApp() *App {
 	}
 	a.yDro.app = a
 	a.yDro.Label = "Y"
-	a.yDro.TextSize = th.TextSize * 2.16
 	a.yDro.Callback = func(v float64) {
 		w := a.gs.Wpos
 		w.Y = v
@@ -145,7 +143,6 @@ func NewApp() *App {
 	}
 	a.zDro.app = a
 	a.zDro.Label = "Z"
-	a.zDro.TextSize = th.TextSize * 2.16
 	a.zDro.Callback = func(v float64) {
 		w := a.gs.Wpos
 		w.Z = v
@@ -153,7 +150,6 @@ func NewApp() *App {
 	}
 	a.aDro.app = a
 	a.aDro.Label = "A"
-	a.aDro.TextSize = th.TextSize * 2.16
 	a.aDro.Callback = func(v float64) {
 		w := a.gs.Wpos
 		w.A = v
@@ -161,39 +157,33 @@ func NewApp() *App {
 	}
 	a.jogIncEdit.app = a
 	a.jogIncEdit.Label = " Inc."
-	a.jogIncEdit.TextSize = th.TextSize * 1.6
 	a.jogIncEdit.Callback = func(v float64) {
 		a.jog.Increment = v
 	}
 	a.jogFeedEdit.app = a
 	a.jogFeedEdit.Label = " Feed"
-	a.jogFeedEdit.TextSize = th.TextSize * 1.6
 	a.jogFeedEdit.Callback = func(v float64) {
 		a.jog.FeedRate = v
 	}
 	a.jogRapidFeedEdit.app = a
 	a.jogRapidFeedEdit.Label = "Rapid"
-	a.jogRapidFeedEdit.TextSize = th.TextSize * 1.6
 	a.jogRapidFeedEdit.Callback = func(v float64) {
 		a.jog.RapidFeedRate = v
 	}
 	a.feedOverrideEdit.app = a
 	a.feedOverrideEdit.Label = "   Feed"
-	a.feedOverrideEdit.TextSize = th.TextSize * 1.6
 	a.feedOverrideEdit.Int = true
 	a.feedOverrideEdit.Callback = func(v float64) {
 		a.g.SetFeedOverride(int(v))
 	}
 	a.rapidOverrideEdit.app = a
 	a.rapidOverrideEdit.Label = "  Rapid"
-	a.rapidOverrideEdit.TextSize = th.TextSize * 1.6
 	a.rapidOverrideEdit.Int = true
 	a.rapidOverrideEdit.Callback = func(v float64) {
 		a.g.SetRapidOverride(int(v))
 	}
 	a.spindleOverrideEdit.app = a
 	a.spindleOverrideEdit.Label = "Spindle"
-	a.spindleOverrideEdit.TextSize = th.TextSize * 1.6
 	a.spindleOverrideEdit.Int = true
 	a.spindleOverrideEdit.Callback = func(v float64) {
 		a.g.SetSpindleOverride(int(v))
@@ -213,6 +203,9 @@ func NewApp() *App {
 		fmt.Fprintf(os.Stderr, "open pugs.png: %v", err)
 		os.Exit(1)
 	}
+
+	// initialise other text sizes
+	a.SetTextSize(a.th.TextSize)
 
 	a.w = app.NewWindow(
 		app.Title("G-code sender"),
@@ -263,7 +256,7 @@ func (a *App) Run() {
 						a.mdi.Defocus()
 					} else if gtxE.Kind == pointer.Scroll {
 						if gtxE.Modifiers.Contain(key.ModCtrl) {
-							a.th.TextSize *= unit.Sp(1.0 - float64(gtxE.Scroll.Y)/100.0)
+							a.SetTextSize(a.th.TextSize * unit.Sp(1.0-float64(gtxE.Scroll.Y)/100.0))
 						}
 					}
 				}
@@ -549,12 +542,12 @@ func (a *App) KeyPress(e key.Event) {
 			a.PopMode()
 		}
 	} else if e.Name == "+" && e.Modifiers.Contain(key.ModCtrl) {
-		a.th.TextSize *= 1.1
+		a.SetTextSize(a.th.TextSize * 1.1)
 	} else if e.Name == "-" && e.Modifiers.Contain(key.ModCtrl) {
-		a.th.TextSize /= 1.1
+		a.SetTextSize(a.th.TextSize / 1.1)
 	} else if e.Name == "0" && e.Modifiers.Contain(key.ModCtrl) {
 		// XXX: is this always right?
-		a.th.TextSize = 16.0
+		a.SetTextSize(16.0)
 	}
 }
 
@@ -625,4 +618,18 @@ func (a *App) EditorHidden() {
 func (a *App) CanJog() bool {
 	// we can jog if grbl is in "Idle" or "Jog" status
 	return a.gs.Status == "Idle" || a.gs.Status == "Jog"
+}
+
+func (a *App) SetTextSize(sz unit.Sp) {
+	a.th.TextSize = sz
+	a.xDro.TextSize = a.th.TextSize * 2.16
+	a.yDro.TextSize = a.th.TextSize * 2.16
+	a.zDro.TextSize = a.th.TextSize * 2.16
+	a.aDro.TextSize = a.th.TextSize * 2.16
+	a.jogIncEdit.TextSize = a.th.TextSize * 1.6
+	a.jogFeedEdit.TextSize = a.th.TextSize * 1.6
+	a.jogRapidFeedEdit.TextSize = a.th.TextSize * 1.6
+	a.feedOverrideEdit.TextSize = a.th.TextSize * 1.6
+	a.rapidOverrideEdit.TextSize = a.th.TextSize * 1.6
+	a.spindleOverrideEdit.TextSize = a.th.TextSize * 1.6
 }

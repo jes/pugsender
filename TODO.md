@@ -72,6 +72,7 @@
  * save settings to file
  * remember config: jog inc, jog feed, jog rapid, split layout ratios
  * stash grbl config and allow restore (and save to file?)
+ * zoom level
 
 ## Gcode sending
 

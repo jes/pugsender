@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"image"
 
 	"gioui.org/layout"
@@ -41,7 +40,6 @@ func (t Toolbar) Layout(gtx C, children ...layout.Widget) D {
 		dims := childDims[i]
 		width := layout.Horizontal.Convert(dims.Size).X
 		if xOffset+width > cs.Max.X {
-			fmt.Println(".")
 			xOffset = 0
 			// TODO: this makes each row equally tall, which is not necessarily the case
 			// (each row only needs enough Y height to contain the items on that row),

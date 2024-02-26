@@ -102,9 +102,16 @@ func (j *JogControl) SendJogCommand(line string) bool {
 }
 
 func (j *JogControl) JogTo(x, y float64) {
-	// TODO: should this update the targets for the axes?
 	j.Cancel()
-	j.SendJogCommand(fmt.Sprintf("X%.3fY%.3fF%.3f", x, y, j.ActiveFeedRate))
+	j.Axes.X.SetIncrementalTarget(x)
+	j.Axes.Y.SetIncrementalTarget(y)
+	j.SendJog()
+}
+
+func (j *JogControl) SetActiveFeedRate(feed float64) {
+	j.ActiveFeedRate = feed
+	j.Cancel()
+	j.SendJog()
 }
 
 func (j *JogControl) Update(newKeyState map[string]JogKeyState) {

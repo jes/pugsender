@@ -249,17 +249,13 @@ func (a *App) Run() {
 						}
 
 						if gtxE.Name == key.NameShift {
-							a.jog.ActiveFeedRate = a.jog.RapidFeedRate
-							// TODO: some way to "refresh jog feed rate" that does nothing if not jogging
-							a.jog.JogTo(a.jog.Target.X, a.jog.Target.Y)
+							a.jog.SetActiveFeedRate(a.jog.RapidFeedRate)
 						}
 					} else if gtxE.State == key.Release {
 						keystate[gtxE.Name] = JogKeyRelease
 
 						if gtxE.Name == key.NameShift {
-							a.jog.ActiveFeedRate = a.jog.FeedRate
-							// TODO: some way to "refresh jog feed rate" that does nothing if not jogging
-							a.jog.JogTo(a.jog.Target.X, a.jog.Target.Y)
+							a.jog.SetActiveFeedRate(a.jog.FeedRate)
 						}
 					}
 				case pointer.Event:

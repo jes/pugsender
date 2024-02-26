@@ -103,13 +103,18 @@ func (j *JogAxis) Update(pos float64, vel float64) {
 		j.MetIncrementalTarget = true
 		j.Target = pos
 		j.Idle = true
+		j.NeedsCommand = false
 	} else {
 		j.Idle = false
 	}
 }
 
 func (j *JogAxis) AddIncremental(dist float64) {
-	j.IncrementalTarget += dist
+	j.SetIncrementalTarget(j.IncrementalTarget + dist)
+}
+
+func (j *JogAxis) SetIncrementalTarget(v float64) {
+	j.IncrementalTarget = v
 	fmt.Printf("inc = %.3f\n", j.IncrementalTarget)
 	if j.Idle || !j.MetIncrementalTarget {
 		// if the axis is idle, then the true target is the incremental target

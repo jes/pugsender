@@ -16,7 +16,7 @@ type MDI struct {
 	wantDefocus     bool
 	defocusOnSubmit bool
 
-	history      []string // TODO: save the history to disk?
+	history      []string
 	historyIndex int
 }
 
@@ -73,7 +73,6 @@ func (m *MDI) Layout(gtx C) D {
 						m.editor.SetText(m.history[m.historyIndex])
 						m.defocusOnSubmit = false
 					} else {
-						// TODO: if we scroll all the way down (m.historyIndex == len(m.history)) then restore whatever was in the input before scrolling began
 						m.editor.SetText("")
 					}
 				}

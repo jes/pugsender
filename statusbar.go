@@ -8,7 +8,6 @@ import (
 )
 
 func (a *App) LayoutStatusBar(gtx C) D {
-	// TODO: stop hard-coding colours everywhere, make the app have a theme that is more expansive than material.Theme
 	return LayoutColour(gtx, grey(32), func(gtx C) D {
 		return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
 			layout.Rigid(layout.Spacer{Width: 4}.Layout),

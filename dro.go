@@ -66,19 +66,26 @@ func (a *App) LayoutDROCoords(gtx C) D {
 		a.w.Invalidate()
 	}
 
+	flexChilds := []layout.FlexChild{
+		layout.Rigid(func(gtx C) D {
+			return a.xDro.Layout(gtx, a.gs.WposExt().X)
+		}),
+		layout.Rigid(func(gtx C) D {
+			return a.yDro.Layout(gtx, a.gs.WposExt().Y)
+		}),
+		layout.Rigid(func(gtx C) D {
+			return a.zDro.Layout(gtx, a.gs.WposExt().Z)
+		}),
+	}
+
+	if a.gs.Has4thAxis {
+		flexChilds = append(flexChilds, layout.Rigid(func(gtx C) D {
+			return a.aDro.Layout(gtx, a.gs.WposExt().A)
+		}))
+	}
+
 	return Panel{Width: 1, Color: grey(128), CornerRadius: 5, Padding: layout.UniformInset(5), BackgroundColor: grey(32)}.Layout(gtx, func(gtx C) D {
-		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-			layout.Rigid(func(gtx C) D {
-				return a.xDro.Layout(gtx, a.gs.WposExt().X)
-			}),
-			layout.Rigid(func(gtx C) D {
-				return a.yDro.Layout(gtx, a.gs.WposExt().Y)
-			}),
-			layout.Rigid(func(gtx C) D {
-				return a.zDro.Layout(gtx, a.gs.WposExt().Z)
-			}),
-			// TODO: optional 4th axis?
-		)
+		return layout.Flex{Axis: layout.Vertical}.Layout(gtx, flexChilds...)
 	})
 }
 
@@ -129,7 +136,6 @@ func (a *App) LayoutOverrides(gtx C) D {
 				return a.feedOverrideEdit.Layout(gtx, a.gs.FeedOverride)
 			}),
 			layout.Rigid(func(gtx C) D {
-				// TODO: since this only supports 25%, 50%, 100%, do we want different UI? or don't expose it at all?
 				return a.rapidOverrideEdit.Layout(gtx, a.gs.RapidOverride)
 			}),
 			layout.Rigid(func(gtx C) D {

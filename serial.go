@@ -38,8 +38,6 @@ func (a *App) AutoConnect() {
 			}
 
 			for _, port := range ports {
-				// TODO: only try to connect to ports that have
-				// newly-appeared since we last tried?
 				go a.TryToConnect(port)
 			}
 		}

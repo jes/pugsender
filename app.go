@@ -55,12 +55,13 @@ type App struct {
 	gs    GrblStatus
 	gsNew GrblStatus
 
-	th          *material.Theme
-	w           *app.Window
-	mode        Mode
-	modeStack   []Mode
-	autoConnect bool
-	jog         JogControl
+	th              *material.Theme
+	InitialTextSize unit.Sp
+	w               *app.Window
+	mode            Mode
+	modeStack       []Mode
+	autoConnect     bool
+	jog             JogControl
 
 	xDro                EditableNum
 	yDro                EditableNum
@@ -114,6 +115,7 @@ func NewApp() *App {
 		autoConnect:     true,
 		gcodeRunnerChan: make(chan RunnerCmd),
 	}
+	a.InitialTextSize = th.TextSize
 
 	a.gcode = NewGCodeRunner(a)
 
@@ -477,13 +479,11 @@ func (a *App) KeyPress(e key.Event) {
 			a.mdi.defocusOnSubmit = true
 			a.PushMode(ModeMDI)
 		} else if e.Name == "O" {
-			// TODO: this is not exactly what I want, because:
-			// - it lets you open multiple file browsers simultaneously
-			// - it doesn't have the nice keyboard-driven tab-completing ui I want
+			// open gcode file
 			go func() {
 				w := app.NewWindow(app.Title("Open G-code file"))
 				e := explorer.NewExplorer(w)
-				f, err := e.ChooseFile() // TODO: filtering by ".gcode" file extension doesn't seem to work properly? hides some files even if they have the correct extension
+				f, err := e.ChooseFile()
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "explorer.ChooseFile(): %v\n", err)
 				} else {
@@ -491,22 +491,29 @@ func (a *App) KeyPress(e key.Event) {
 				}
 			}()
 		} else if e.Name == "I" {
+			// edit jog increment
 			a.jogIncEdit.ShowEditor()
 		} else if e.Name == "F" {
+			// edit jog feed
 			a.jogFeedEdit.ShowEditor()
 		} else if e.Name == "P" {
+			// edit fast jog feed
 			a.jogRapidFeedEdit.ShowEditor()
 		}
 	}
 
 	if a.mode == ModeJog || a.mode == ModeRun {
 		if e.Name == "H" {
+			// feed hold
 			a.gcodeRunnerChan <- CmdPause
 		} else if e.Name == "R" {
+			// soft reset
 			a.gcodeRunnerChan <- CmdStop
 		} else if e.Name == "S" {
+			// cycle start
 			a.gcodeRunnerChan <- CmdStart
 		} else if e.Name == "U" {
+			// alarm unlock
 			a.AlarmUnlock()
 		}
 	}
@@ -520,21 +527,19 @@ func (a *App) KeyPress(e key.Event) {
 		} else if e.Name == "Z" {
 			if e.Modifiers.Contain(key.ModCtrl) {
 				// ctrl-z = undo WCO change
-				// TODO: undo other operations?
-				// TODO: more levels of undo?
 				if a.canUndo {
 					a.SetWpos(a.gs.Mpos.Sub(a.undoWco))
 				}
 			} else {
 				a.zDro.ShowEditor()
 			}
-		} else if e.Name == "A" {
-			// TODO: only if there is a 4th axis
+		} else if e.Name == "A" && a.gs.Has4thAxis {
 			a.aDro.ShowEditor()
 		}
 	}
 
 	if e.Name == key.NameEscape {
+		// pop mode
 		if a.mode == ModeMDI {
 			a.mdi.Defocus()
 		}
@@ -542,12 +547,14 @@ func (a *App) KeyPress(e key.Event) {
 			a.PopMode()
 		}
 	} else if e.Name == "+" && e.Modifiers.Contain(key.ModCtrl) {
+		// ctrl + = zoom in
 		a.SetTextSize(a.th.TextSize * 1.1)
 	} else if e.Name == "-" && e.Modifiers.Contain(key.ModCtrl) {
+		// ctrl - = zoom out
 		a.SetTextSize(a.th.TextSize / 1.1)
 	} else if e.Name == "0" && e.Modifiers.Contain(key.ModCtrl) {
-		// XXX: is this always right?
-		a.SetTextSize(16.0)
+		// ctrl 0 = reset zoom
+		a.SetTextSize(a.InitialTextSize)
 	}
 }
 
@@ -590,7 +597,6 @@ func chooseFonts(fonts []font.FontFace) []font.FontFace {
 func (a *App) SetWpos(p V4d) {
 	wco := a.gs.Wco
 	if a.g.SetWpos(p) {
-		// TODO: popup a message saying they can use Ctrl-Z to undo
 		a.undoWco = wco
 		a.canUndo = true
 	}

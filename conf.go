@@ -8,8 +8,6 @@ import (
 	"strings"
 )
 
-// TODO: is there a sensible config lib that I should be using instead?
-
 func (a *App) WriteConf(gs GrblStatus) {
 	filename := a.ConfFile()
 	f, err := os.Create(a.ConfFile())

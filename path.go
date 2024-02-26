@@ -54,9 +54,6 @@ func NewPath() *Path {
 }
 
 func (p *Path) Update(pos V4d) {
-	// TODO: if this point lies on a straight line through
-	// the last 2 points, simplify the path by replacing the
-	// last point instead of appending
 	eps := 0.001
 	l := len(p.positions)
 	if l > 0 && p.positions[l-1].Sub(pos).Length() < eps {
@@ -169,16 +166,8 @@ func (p *Path) RenderGCode() bool {
 	p.gcodeLayer = image.NewRGBA(image.Rect(0, 0, p.widthPx, p.heightPx))
 	gc := draw2dimg.NewGraphicContext(p.gcodeLayer)
 
-	// TODO: deduplicate with `RenderToolpath()`
-	l := len(p.gcodePositions)
-	if l > 0 {
-		gc.SetStrokeColor(color.White)
-		gc.MoveTo(p.MmToPx(p.gcodePositions[0].X+p.axes.X, p.gcodePositions[0].Y+p.axes.Y))
-		for _, pos := range p.gcodePositions {
-			gc.LineTo(p.MmToPx(pos.X+p.axes.X, pos.Y+p.axes.Y))
-		}
-		gc.Stroke()
-	}
+	gc.SetStrokeColor(color.White)
+	p.RenderPath(gc, p.gcodePositions, p.axes)
 
 	p.needGCodeRedraw = false
 	return true
@@ -194,25 +183,33 @@ func (p *Path) RenderToolpath() bool {
 	}
 
 	startIdx := p.drawnPositions - 1
+	if startIdx < 0 {
+		startIdx = 0
+	}
 	if p.ForceRedraw {
 		p.toolpathLayer = image.NewRGBA(image.Rect(0, 0, p.widthPx, p.heightPx))
 		startIdx = 0
 	}
 	gc := draw2dimg.NewGraphicContext(p.toolpathLayer)
 
-	// TODO: deduplicate with `RenderGCode()`
-	if l > 0 {
-		gc.SetStrokeColor(grey(128))
-		gc.MoveTo(p.MmToPx(p.positions[startIdx].X, p.positions[startIdx].Y))
-		for _, pos := range p.positions[startIdx+1:] {
-			gc.LineTo(p.MmToPx(pos.X, pos.Y))
-		}
-		gc.Stroke()
-
-		p.drawnPositions = l
-	}
+	gc.SetStrokeColor(grey(128))
+	p.RenderPath(gc, p.positions[startIdx:], V4d{})
+	p.drawnPositions = l
 
 	return true
+}
+
+func (p *Path) RenderPath(gc *draw2dimg.GraphicContext, path []V4d, offset V4d) {
+	if len(path) < 2 {
+		return
+	}
+
+	gc.MoveTo(p.MmToPx(path[0].X+offset.X, path[0].Y+offset.Y))
+	for _, pos := range path[1:] {
+		gc.LineTo(p.MmToPx(pos.X+offset.X, pos.Y+offset.Y))
+	}
+	gc.Stroke()
+
 }
 
 func (p *Path) RenderForeground() bool {

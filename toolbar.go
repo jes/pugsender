@@ -41,7 +41,7 @@ func (t Toolbar) Layout(gtx C, children ...layout.Widget) D {
 		width := layout.Horizontal.Convert(dims.Size).X
 		if xOffset+width > cs.Max.X {
 			xOffset = 0
-			// TODO: this makes each row equally tall, which is not necessarily the case
+			// this makes each row equally tall, which is not necessarily the case
 			// (each row only needs enough Y height to contain the items on that row),
 			// but it's OK for now since we expect all buttons on a toolbar to have the
 			// same height

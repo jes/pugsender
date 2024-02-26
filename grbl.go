@@ -57,9 +57,6 @@ func (g *Grbl) Command(line string, respChan chan string) bool {
 	// not enough space in Grbl's input buffer? reject the command
 	// +1 because we need to leave at least 1 byte free else Grbl locks up
 	if g.status.SerialFree <= len(line)+1 {
-		// TODO: race condition: we could have multiple threads in this
-		// function at the same time, need to also check SerialFree later
-		// when stuff pops out of g.writeChan
 		return false
 	}
 
@@ -89,7 +86,6 @@ func (g *Grbl) CommandIgnore(line string) bool {
 // (true, "...response...") if successful or (false, "") if not
 //
 // block until the response is received
-// TODO: other threads can still send data while this thread is blocked, which can cause corrupted commands
 func (g *Grbl) CommandWait(line string) (bool, string) {
 	if !g.status.Ready {
 		return false, ""
@@ -177,18 +173,25 @@ loop:
 			g.doAbortCommands()
 
 		case r := <-g.writeChan: // write to grbl
+			if g.status.SerialFree < len(r.command) {
+				if r.responseChan != nil {
+					r.responseChan <- "fail:buffer full"
+				}
+				continue loop
+			}
+
 			if r.responseChan != nil {
 				// responseChan is nil for commands that don't expect
 				// a response (i.e. realtime commands)
 				g.responseQueue = append(g.responseQueue, r)
 			}
 
-			// TODO: maybe check buffer space at this point? and queue
-			// or drop the command if there is not buffer space yet?
-			// (can probably ignore for realtime commands though)
 			_, err := g.serialPort.Write([]byte(r.command))
 			if err != nil {
-				g.SendResponse(fmt.Sprintf("fail:write error: %v", err))
+				// don't send a response if no responseChan, else the response queue will be out of sync
+				if r.responseChan != nil {
+					g.SendResponse(fmt.Sprintf("fail:write error: %v", err))
+				}
 				break loop
 			}
 
@@ -247,7 +250,6 @@ func (g *Grbl) RequestGCodes() bool {
 		return true
 	}
 	g.status.WaitingForGCodes = true
-	// TODO: also request gcodes whenever we think they might have changed?
 	ok := g.CommandIgnore("$G")
 	if !ok && g.status.Closed {
 		return false
@@ -404,8 +406,6 @@ func (g *Grbl) SetWpos(p V4d) bool {
 	// XXX: uses CommandWait, which can block the main UI thread
 	// because of https://github.com/gnea/grbl/wiki/Grbl-v1.1-Interface#eeprom-issues
 	// we need to wait until a G10 is acknowledged before proceeding
-	// TODO: maybe g.Command should detect if the command implies EEPROM
-	// access and if so block until it is completed automatically?
 	if g.status.Status != "Idle" {
 		// only allow setting WCO in Idle state
 		return false

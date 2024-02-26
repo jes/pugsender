@@ -10,7 +10,6 @@ type GrblStatus struct {
 	Wco              V4d
 	Mpos             V4d
 	Wpos             V4d
-	Dtg              V4d // TODO: how can we calculate this?
 	Vel              V4d
 	PlannerSize      int
 	PlannerFree      int

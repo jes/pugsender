@@ -50,9 +50,6 @@ func (r *GCodeRunner) Load(reader io.Reader) {
 	r.app.tp.path.SetGCode(r.Path())
 }
 
-// TODO: the gcode runner should be attached to the gcode itself,
-// and created and destroyed as/when new gcode files are loaded, to
-// fix the issue of ownership of the gcode
 func (r *GCodeRunner) Run(ch chan RunnerCmd) {
 	r.running = false
 	r.optionalStop = true
@@ -69,12 +66,15 @@ func (r *GCodeRunner) Run(ch chan RunnerCmd) {
 			switch cmd {
 			case CmdStart:
 				r.running = true
+				if r.nextLine > len(r.gcode) {
+					// reset to start if run was previously completed
+					r.nextLine = 0
+				}
 				r.CycleStart()
 
 			case CmdStop:
 				r.running = false
 				r.nextLine = 0
-				// TODO: send a feed hold now, and only send the soft reset once the status is "Hold:2" or whatever
 				r.SoftReset()
 
 			case CmdPause:
@@ -96,8 +96,10 @@ func (r *GCodeRunner) Run(ch chan RunnerCmd) {
 			}
 
 		case resp := <-respChan:
-			// TODO: detect errors and react accordingly?
-			_ = resp
+			if resp != "ok" {
+				r.running = false
+				r.FeedHold()
+			}
 			waiting--
 		}
 
@@ -112,19 +114,14 @@ func (r *GCodeRunner) Run(ch chan RunnerCmd) {
 				}
 
 				fmt.Printf("> [%s]\n", line)
-				// TODO: use the character-counting method instead of waiting for a response?
 				if r.app.g.Command(line, respChan) {
 					waiting++
 				}
 
-				// TODO: stop requesting G codes after every command (but
-				// how else do we display up-to-date G codes?)
 				r.app.g.RequestGCodes()
 			} else {
 				// program is complete
-				// TODO: only reset r.nextLine once we're back in "Idle" status
 				r.running = false
-				r.nextLine = 0
 
 				if r.app.mode == ModeRun {
 					r.app.PopMode()
@@ -159,7 +156,6 @@ func (r *GCodeRunner) Path() []V4d {
 			continue
 		}
 		G := -1
-		// TODO: this is wrong, because it will update pos for non-movement lines
 		for _, gc := range line.Codes {
 			if gc.Letter == "G" {
 				G = int(gc.Value)
@@ -173,7 +169,6 @@ func (r *GCodeRunner) Path() []V4d {
 				pos.A = gc.Value
 			}
 		}
-		// TODO: G2,G3 need to be arcs, other movements need supporting
 		if G == 0 || G == 1 || G == 2 || G == 3 {
 			path = append(path, pos)
 		}

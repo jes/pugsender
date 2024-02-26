@@ -124,7 +124,6 @@ func (tp *ToolpathView) LayoutImage(gtx C) D {
 						tp.app.SetWpos(wpos)
 					}
 				}
-				// TODO: right-click for context menu?
 				tp.dragging = false
 			} else if gtxE.Kind == pointer.Move {
 				tp.hovering = true

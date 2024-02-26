@@ -40,11 +40,18 @@ func (a *App) LayoutGrblStatus(gtx C) D {
 		status = "Hold..."
 	}
 
+	bgCol := grey(32)
+	if status == "Idle" {
+		bgCol = rgb(32, 64, 32)
+	} else if status == "Alarm" {
+		bgCol = rgb(64, 32, 32)
+	}
+
 	label := material.H4(a.th, strings.ToUpper(status))
 	label.Alignment = text.Middle
 	borderColour := grey(128)
 	return widget.Border{Width: 1, CornerRadius: 2, Color: borderColour}.Layout(gtx, func(gtx C) D {
-		return LayoutColour(gtx, grey(32), func(gtx C) D {
+		return LayoutColour(gtx, bgCol, func(gtx C) D {
 			return layout.UniformInset(5).Layout(gtx, func(gtx C) D {
 				return label.Layout(gtx)
 			})

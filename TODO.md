@@ -91,7 +91,7 @@
 
  * drain on tool change, and allow touching off
  * make a new GCodeRunner on gcode load, and destroy the old one, so that there is no data race
- * on CmdStop, send a feed hold and wait for status "Hold:2" before sending soft-reset
+ * on CmdStop, why isn't the SoftReset() after reaching "Hold:0" always working? sometimes stays in Hold:0
  * detect errors from respChan, probably feed hold, and alert the user
  * use character-counting instead of waiting for a response before sending the next line?
  * stop requesting G codes after every command (but how else do you display up-to-date G codes?)

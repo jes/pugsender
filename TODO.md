@@ -75,6 +75,7 @@
  * make it so the colours in the toolpath view can distinguish between "machine has moved here", "machine will move here", and "machine has moved here and will move here again"
  * simplify paths (for both gcode path and actual-movement path) so that points that lie on a straight line through the previous 2 points are updated in-place instead of adding a new point
  * right-click for context menu?
+ * profile double-buffering vs creating new images every time
 
 ## Saving state
 

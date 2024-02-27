@@ -409,9 +409,9 @@ func (a *App) LayoutButtons(gtx C) D {
 	}
 
 	return Toolbar{Inset: layout.UniformInset(5)}.Layout(gtx,
-		material.Button(a.th, a.startBtn, "START").Layout,
+		material.Button(a.th, a.startBtn, "RUN").Layout,
 		material.Button(a.th, a.holdBtn, "HOLD").Layout,
-		material.Button(a.th, a.resetBtn, "RESET").Layout,
+		material.Button(a.th, a.resetBtn, "STOP").Layout,
 		material.Button(a.th, a.drainBtn, "DRAIN").Layout,
 		material.Button(a.th, a.singleBtn, "SINGLE").Layout,
 		material.Button(a.th, a.unlockBtn, "UNLOCK").Layout,

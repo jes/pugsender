@@ -149,8 +149,8 @@ func (r *GCodeRunner) CycleStart() {
 }
 
 func (r *GCodeRunner) SoftReset() {
-	r.app.g.AbortCommands()
 	r.app.g.CommandRealtime(0x18)
+	r.app.g.AbortCommands()
 }
 
 func (r *GCodeRunner) FeedHold() {

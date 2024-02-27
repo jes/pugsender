@@ -15,13 +15,13 @@ type Grbl struct {
 	serialPort    io.ReadWriteCloser
 	status        GrblStatus
 	writeChan     chan GrblResponse
-	abortChan     chan struct{}
 	responseQueue []GrblResponse
 }
 
 type GrblResponse struct {
 	responseChan chan string
 	command      string
+	abort        bool
 }
 
 func NewGrbl(port io.ReadWriteCloser, portName string) *Grbl {
@@ -36,7 +36,6 @@ func NewGrbl(port io.ReadWriteCloser, portName string) *Grbl {
 		serialPort: port,
 		status:     status,
 		writeChan:  make(chan GrblResponse, 10),
-		abortChan:  make(chan struct{}),
 	}
 	return g
 }
@@ -63,7 +62,7 @@ func (g *Grbl) Command(line string, respChan chan string) bool {
 	}
 
 	g.status.SerialFree -= len(line)
-	g.writeChan <- GrblResponse{respChan, line}
+	g.writeChan <- GrblResponse{responseChan: respChan, command: line}
 
 	return true
 }
@@ -106,7 +105,7 @@ func (g *Grbl) CommandRealtime(cmd byte) bool {
 	if g.status.Closed {
 		return false
 	}
-	g.writeChan <- GrblResponse{nil, string(cmd)}
+	g.writeChan <- GrblResponse{command: string(cmd)}
 	return true
 }
 
@@ -171,10 +170,14 @@ loop:
 				break loop
 			}
 
-		case <-g.abortChan: // abort commands
-			g.doAbortCommands()
-
 		case r := <-g.writeChan: // write to grbl
+			if r.abort {
+				// clear out the response queue (e.g. because we sent a soft-reset), and
+				// don't send any new data
+				g.doAbortCommands()
+				continue loop
+			}
+
 			if g.status.SerialFree < len(r.command) {
 				fmt.Fprintf(os.Stderr, "(in writechan) not running command because serial is full: %s\n", r.command)
 				if r.responseChan != nil {
@@ -395,7 +398,7 @@ func (g *Grbl) SendResponse(line string) {
 }
 
 func (g *Grbl) AbortCommands() {
-	g.abortChan <- struct{}{}
+	g.writeChan <- GrblResponse{abort: true}
 }
 
 func (g *Grbl) doAbortCommands() {
@@ -403,6 +406,7 @@ func (g *Grbl) doAbortCommands() {
 		r.responseChan <- "fail:aborted"
 	}
 	g.responseQueue = make([]GrblResponse, 0)
+	g.status.SerialFree = g.status.SerialSize
 }
 
 func (g *Grbl) SetWpos(p V4d) bool {

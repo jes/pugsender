@@ -76,6 +76,7 @@
  * simplify paths (for both gcode path and actual-movement path) so that points that lie on a straight line through the previous 2 points are updated in-place instead of adding a new point
  * right-click for context menu?
  * profile double-buffering vs creating new images every time
+ * when panning/zooming, initially pan/zoom the previous rendered view, even though it will have bits missing or blurry, instead of doing nothing until the new view is rendered
 
 ## Saving state
 

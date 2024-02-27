@@ -1,6 +1,9 @@
 package main
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type GrblStatus struct {
 	PortName         string
@@ -56,4 +59,34 @@ func (gs GrblStatus) WposExt() V4d {
 func (gs GrblStatus) MposExt() V4d {
 	dt := time.Now().Sub(gs.UpdateTime)
 	return gs.Mpos.Add(gs.Vel.Mul(dt.Minutes()))
+}
+
+func (gs GrblStatus) String() string {
+	wposStr := fmt.Sprintf("%.3f,%.3f,%.3f", gs.Wpos.X, gs.Wpos.Y, gs.Wpos.Z)
+	wcoStr := fmt.Sprintf("%.3f,%.3f,%.3f", gs.Wco.X, gs.Wco.Y, gs.Wco.Z)
+	if gs.Has4thAxis {
+		wposStr = fmt.Sprintf("%.3f,%.3f,%.3f,%.3f", gs.Wpos.X, gs.Wpos.Y, gs.Wpos.Z, gs.Wpos.A)
+		wcoStr = fmt.Sprintf("%.3f,%.3f,%.3f,%.3f", gs.Wco.X, gs.Wco.Y, gs.Wco.Z, gs.Wco.A)
+	}
+	bfStr := fmt.Sprintf("%d,%d", gs.PlannerFree, gs.SerialFree)
+	fsStr := fmt.Sprintf("%d,%d", int(gs.FeedRate), int(gs.SpindleSpeed))
+	ovStr := fmt.Sprintf("%d,%d,%d", int(gs.FeedOverride), int(gs.RapidOverride), int(gs.SpindleOverride))
+	aStr := ""
+	if gs.SpindleCw {
+		aStr += "S"
+	}
+	if gs.SpindleCcw {
+		aStr += "C"
+	}
+	if gs.FloodCoolant {
+		aStr += "F"
+	}
+	if gs.MistCoolant {
+		aStr += "M"
+	}
+	pnStr := ""
+	if gs.Probe {
+		pnStr = "P"
+	}
+	return "<" + gs.Status + "|WPos:" + wposStr + "|WCO:" + wcoStr + "|FS:" + fsStr + "|Bf:" + bfStr + "|Ov:" + ovStr + "|A:" + aStr + "|Pn:" + pnStr + ">"
 }

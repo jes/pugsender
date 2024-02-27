@@ -31,6 +31,7 @@ func NewGrbl(port io.ReadWriteCloser, portName string) *Grbl {
 	} else {
 		status.Closed = false
 	}
+	status.PortName = portName
 	g := &Grbl{
 		serialPort: port,
 		status:     status,

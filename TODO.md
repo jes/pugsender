@@ -11,8 +11,6 @@
 
 ## Serial connection
 
- * allow disabling autoconnect
- * allow connecting to manually-typed serial port
  * raw serial console
  * better indication of auto-connector behaviour (specifically, when it doesn't connect: why? and what did it try?)
  * only try to connect to ports that have newly-appeared (or disappeared and reappeared) since last connection attempt?
@@ -98,3 +96,16 @@
  * In `GCodeRunner.Path()`, only update `pos` for commands that are actually movements
  * In `GCodeRunner.Path()`, handle G2, G3, etc.
  * In `Grbl.Run()`, if the command to write implies eeprom access, then block until it is complete, don't write any more yet, because https://github.com/gnea/grbl/wiki/Grbl-v1.1-Interface#eeprom-issues - and then make `SetWpos` stop using `CommandWait`
+
+## Simulator
+
+ * make movements at the defined feed rate, instead of instantly
+ * simulate using up the planner/serial buffers
+ * send config in response to "$$"
+ * support jogging with "$J="
+
+## Architecture
+
+ * split out the grbl stuff into a separate lib
+ * patch github.com/256dpi/gcode, or fork it, to parse lines like "g0x5" correctly (don't require uppercase, don't require spaces)
+ * unit tests

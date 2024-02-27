@@ -110,3 +110,4 @@
  * split out the grbl stuff into a separate lib
  * patch github.com/256dpi/gcode, or fork it, to parse lines like "g0x5" correctly (don't require uppercase, don't require spaces)
  * unit tests
+ * update dependencies (specifically gio)

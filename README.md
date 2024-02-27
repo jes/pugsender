@@ -29,3 +29,7 @@ account, not just the number of lines).
 I don't ever want g-code processing or toolpath rendering to block the GUI (if it is taking a long
 time to render something then *that thing* can get laggy, but the rest of the GUI should run at full
 speed). [done]
+
+Installing dependencies (Fedora 39):
+
+  $ sudo dnf install golang libX11-devel libXcursor-devel libXfixes-devel libwayland-client-devel libxkbcommon-devel libxkbcommon-x11-devel mesa-libEGL-devel vulkan-headers wayland-devel

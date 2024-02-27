@@ -110,6 +110,8 @@ func (r *GCodeRunner) Run(ch chan RunnerCmd) {
 		}
 
 		if r.stopping && r.app.gs.Status == "Hold:0" {
+			// XXX: call r.SoftReset() twice, because sometimes the first one doesn't work (???)
+			r.SoftReset()
 			r.SoftReset()
 			r.stopping = false
 			r.running = false

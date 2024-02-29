@@ -101,10 +101,7 @@
 
 ## Simulator
 
- * make movements at the defined feed rate, instead of instantly
- * simulate using up the planner/serial buffers
- * send config in response to "$$"
- * support jogging with "$J="
+ * switch to https://github.com/grblHAL/Simulator ?
 
 ## Architecture
 

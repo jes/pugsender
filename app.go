@@ -74,6 +74,7 @@ type App struct {
 	rapidOverrideEdit   EditableNum
 	spindleOverrideEdit EditableNum
 
+	openBtn   *widget.Clickable
 	startBtn  *widget.Clickable
 	holdBtn   *widget.Clickable
 	resetBtn  *widget.Clickable
@@ -191,6 +192,7 @@ func NewApp() *App {
 		a.g.SetSpindleOverride(int(v))
 	}
 
+	a.openBtn = new(widget.Clickable)
 	a.startBtn = new(widget.Clickable)
 	a.holdBtn = new(widget.Clickable)
 	a.resetBtn = new(widget.Clickable)
@@ -381,6 +383,9 @@ func (a *App) AlarmUnlock() {
 }
 
 func (a *App) LayoutButtons(gtx C) D {
+	for a.openBtn.Clicked(gtx) {
+		a.OpenFile()
+	}
 	for a.startBtn.Clicked(gtx) {
 		a.gcodeRunnerChan <- CmdStart
 	}
@@ -409,6 +414,7 @@ func (a *App) LayoutButtons(gtx C) D {
 	}
 
 	return Toolbar{Inset: layout.UniformInset(5)}.Layout(gtx,
+		material.Button(a.th, a.openBtn, "OPEN").Layout,
 		material.Button(a.th, a.startBtn, "RUN").Layout,
 		material.Button(a.th, a.holdBtn, "HOLD").Layout,
 		material.Button(a.th, a.resetBtn, "STOP").Layout,
@@ -485,16 +491,7 @@ func (a *App) KeyPress(e key.Event) {
 			a.PushMode(ModeMDI)
 		} else if e.Name == "O" {
 			// open gcode file
-			go func() {
-				w := app.NewWindow(app.Title("Open G-code file"))
-				e := explorer.NewExplorer(w)
-				f, err := e.ChooseFile()
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "explorer.ChooseFile(): %v\n", err)
-				} else {
-					a.gcode.Load(f)
-				}
-			}()
+			a.OpenFile()
 		} else if e.Name == "I" {
 			// edit jog increment
 			a.jogIncEdit.ShowEditor()
@@ -561,6 +558,19 @@ func (a *App) KeyPress(e key.Event) {
 		// ctrl 0 = reset zoom
 		a.SetTextSize(a.InitialTextSize)
 	}
+}
+
+func (a *App) OpenFile() {
+	go func() {
+		w := app.NewWindow(app.Title("Open G-code file"))
+		e := explorer.NewExplorer(w)
+		f, err := e.ChooseFile()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "explorer.ChooseFile(): %v\n", err)
+		} else {
+			a.gcode.Load(f)
+		}
+	}()
 }
 
 func (a *App) ShowNumPop(numpopType string, initVal float64, cb func(float64)) {

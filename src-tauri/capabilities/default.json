@@ -1,0 +1,10 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "Main window permissions for machine control and G-code file selection.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:default"
+  ]
+}

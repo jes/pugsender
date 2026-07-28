@@ -1,111 +1,35 @@
-# Required
+# TODO
 
- * better ui for pause/resume etc.
- * show grbl's messages to user (alarm/error/other message)
- * fix keyboard jog
- * make keyboard shortcuts more sensible
- * make a cheatsheet of keyboard shortcuts
- * fix deadlocks
+## Required
 
-# Nice-to-have
+- Verify real serial transport against physical Grbl/grblHAL hardware. Partial: Arduino Nano on `/dev/ttyUSB0` was flashed with Grbl 1.1h and passed the Pugsender hardware smoke stream; grblHAL and live CNC motion are still untested.
+- Add full grblHAL capability detection beyond axis-count inference. Done for `$I+` reports: firmware, version/build, options, axes, driver, board, signals, storage, aux IO, and plugins are parsed and shown.
+- Expand G-code parser/path planner for less-common modal state and more canned cycles. Partial: arcs, unit/distance modes, plane modes, `G4`, `G73`, `G81`-`G89`, `G92`, `G92.1`, `G92.2`, `G98`, `G99`, and `M2`/`M30` program-end handling are previewed.
+- Refine keyboard shortcut defaults after machine-side testing. Partial: shortcut repeats are suppressed, global shortcuts can be disabled, and keyboard jogging can require Shift; final defaults still need machine-side testing.
+- Add end-to-end Tauri command tests once desktop dependencies are installed in CI/dev. Initial coverage added for Tauri IPC command wiring through simulator load/run/snapshot, plus PTY-backed mock serial streaming and capability detection.
+- Validate stream-progress UI against a real controller. Partial: non-hardware coverage tracks current, queued, completed, next, and pause-after source lines, and the backend stream state passed against a physical Grbl 1.1h controller; full UI validation during live machine motion remains untested.
+- Protect EEPROM-writing commands in the stream. Done: `$` settings writes, `$N`, `$RST=`, `G10 L2/L20`, `G28.1`, and `G30.1` act as stream barriers until acknowledged.
+- Handle program tool changes. Done: `M6`/`M06` drains prior queued motion, skips sending unsupported Grbl tool-change commands, marks the tool-change line, and resumes after the operator continues.
+- Improve serial connection failure UX. Done: failed port opens clear pending probes, return to disconnected state, and report the open error in machine status.
+- Find Grbl automatically. Done: auto-connect probes remembered, USB, and other serial ports for Grbl/grblHAL responses before opening the matching controller.
+- Harden command availability in the UI. Done: run/hold/resume/stop/drain/single-step, MDI, jogging, work offsets, overrides, and connect controls are disabled unless the current machine state can accept them.
+- Harden backend command state validation. Done: IPC commands reject invalid run/hold/resume/drain/single-step state transitions, while stop/reset remains available for active, alarm, and error recovery.
+- Stress serial transmit accounting. Done: streaming now fits each normalized line exactly against reported serial free space, rejects lines too large for the controller buffer, and has burst-load coverage with a deliberately tiny RX buffer.
+- Prevent unsafe program replacement. Done: loading a new G-code file is rejected while a program is running, held, draining, jogging, paused at tool change, or has unacknowledged in-flight lines; the UI disables file loading in the same states.
+- Flush pending serial writes before soft reset. Done: the serial transport now owns a clearable pending-command queue, and any Ctrl-X outbox clears queued G-code before the reset is sent.
+- Verify release packaging. Done: Tauri bundle icons are generated/configured, and `npm run tauri build` produces `.deb`, `.rpm`, and `.AppImage` packages.
+- Prevent unsafe run-from-line changes. Done: run-from-line is rejected while a program is active, held, draining, jogging, paused at tool change, or has in-flight lines; the UI disables the same controls in those states.
+- Fix Tauri dev startup. Done: Vite runs on the strict `1420` port configured as Tauri's `devUrl`, and `npm run tauri dev` reaches the launched app.
+- Improve controller status visibility. Done: the UI shows raw Grbl pin-state letters, planner free slots, serial free space, and active modal codes in the status panel.
+- Clear stale fault banners after recovery. Done: stop/reset clears latched alarm/error fields, and normal controller status reports clear stale fault messages.
+- Fix large-file UI lag. Done: program rows are virtualized, toolpath canvas drawing is batched, successful commands no longer force a duplicate full snapshot fetch, and serial status events send lightweight live snapshots instead of re-sending all G-code lines/toolpath points. `/nas/cad/celesta/case-parts.nc` profiles at about 23.6k lines, 24.7k toolpath points, and under 100 ms backend read/split/toolpath time.
 
-## Serial connection
+## Nice-to-have
 
- * raw serial console
- * better indication of auto-connector behaviour (specifically, when it doesn't connect: why? and what did it try?)
- * only try to connect to ports that have newly-appeared (or disappeared and reappeared) since last connection attempt?
-
-## Gcode files
-
- * show key shortcuts & mouse operations
- * cycle time estimate
- * gcode previews in file selector
- * show gcode filename in status bar
- * detect USB stick insertion & suggest to open the last-modified file, if nothing is currently open
- * "follow outline" of gcode file
- * preprocess gcode to minimise the number of bytes to send over the wire, canonicalise case, strip unnecessary digits, skip comments and blank lines, etc.
-
-## Gcode lines display
- * "run from line", "run to line", on gcode view
- * "pause after line" on gcode view?
- * allow editing gcode?
- * highlight gcode lines in path view when hovered in text view
- * search in gcode view (e.g. to find "Begin profile" comments or whatever)
- * line numbers
- * colour the lines based on: not sent yet, waiting in serial buffer, waiting in planner buffer, currently executing, completed
- * right-click for context menu?
-
-## Interface
-
- * efficient file browser, keyboard-first, tab-completion
- * mouse interface
- * some sort of "processing" indicator while rendering toolpaths, loading gcode, etc.
- * correctly handle the distinction between pixels, Dp, Sp, etc.?
- * when window is full-screen, file selector should be visible, instead of opened "behind" the application
- * make the user confirm if they try to close while program is running
- * support 4th axis (e.g. with grblHAL)
- * icons on buttons
- * make the relevant button show the click animation when you press the keyboard shortcut
- * stash reference coordinates, and then "set work offset" or "jog to here" on them, allow saving XY only or XYZ
- * keyboard shortcuts for overrides
- * stash override settings in some "register", and restore/revert on some macro keypress (maybe make this even more powerful, so it can do other things too)
- * click on "Alarm" label to unlock (maybe also overlay "click to unlock")
- * if jog inc/feed numpop would overflow bottom of screen, draw it further up
- * more levels of undo? undo more things?
- * pop up a message saying you can ctrl-z to undo after assigning to undoWco (more generally, some way to popup messages)
- * different UI for rapid override since it only supports 25%, 50%, 100%?
-
-## MDI
-
- * history search
- * history view
- * make the MDI all caps, automatically insert spaces between a number and a following letter (so "G0x0y0" becomes "G0 X0 Y0")
- * prevent submitting the MDI if there is nothing to submit to? (e.g. disconnected)
- * make the MDI detect all arrow key events (why are some suppressed?)
- * fix history scrolling
- * if you scroll all the way to bottom of history, then restore whatever un-sent half-typed command was already there (may be empty)
-
-## 2d view
-
- * reset 2d view
- * don't draw lines on toolpath view when changing work offset
- * zoom toolpath view to fit content
- * don't draw an initial movement from (0,0,0) to the start point of the g-code
- * show gcode bounding box dimensions in toolpath view
- * make it so the colours in the toolpath view can distinguish between "machine has moved here", "machine will move here", and "machine has moved here and will move here again"
- * simplify paths (for both gcode path and actual-movement path) so that points that lie on a straight line through the previous 2 points are updated in-place instead of adding a new point
- * right-click for context menu?
- * profile double-buffering vs creating new images every time
- * when panning/zooming, initially pan/zoom the previous rendered view, even though it will have bits missing or blurry, instead of doing nothing until the new view is rendered
-
-## Saving state
-
- * save settings to file
- * remember config: jog inc, jog feed, jog rapid, split layout ratios
- * stash grbl config and allow restore (and save to file?)
- * zoom level
- * is there a sensible config lib to use, instead of manual formatting/parsing?
- * MDI history
-
-## Gcode sending
-
- * drain on tool change, and allow touching off
- * make a new GCodeRunner on gcode load, and destroy the old one, so that there is no data race
- * on CmdStop, why isn't the SoftReset() after reaching "Hold:0" always working? sometimes stays in Hold:0
- * detect errors from respChan, probably feed hold, and alert the user
- * use character-counting instead of waiting for a response before sending the next line?
- * stop requesting G codes after every command (but how else do you display up-to-date G codes?)
- * In `GCodeRunner.Path()`, only update `pos` for commands that are actually movements
- * In `GCodeRunner.Path()`, handle G2, G3, etc.
- * In `Grbl.Run()`, if the command to write implies eeprom access, then block until it is complete, don't write any more yet, because https://github.com/gnea/grbl/wiki/Grbl-v1.1-Interface#eeprom-issues - and then make `SetWpos` stop using `CommandWait`
-
-## Simulator
-
- * switch to https://github.com/grblHAL/Simulator ?
-
-## Architecture
-
- * split out the grbl stuff into a separate lib
- * patch github.com/256dpi/gcode, or fork it, to parse lines like "g0x5" correctly (don't require uppercase, don't require spaces)
- * unit tests
- * update dependencies (specifically gio)
+- File browser with tab completion and previews. Done: keyboard path opener has directory/file completion and bounded source previews, native open dialog remains available, last G-code path is remembered, and loading immediately updates the program/toolpath preview.
+- Cycle time estimate. Done: preview estimates are calculated from modal feed/rapid movement and shown in the status panel.
+- Run-to-line and pause-after-line. Done: run-to-line and pause-after-line are available in the program header.
+- Program search and line actions. Done: the program view has text search with previous/next navigation, match highlighting, and per-line controls for run-from and pause-after.
+- Toolpath inspection. Done: preview shows bounding-box dimensions and colors completed, active, queued, and pending movement from source-line metadata.
+- Persistent UI layout and toolpath zoom. Done: console visibility, toolpath zoom, and right-side panel width are persisted.
+- Richer continuous keyboard jogging. Done: held arrow/PageUp/PageDown keys and held jog buttons repeat jog commands.
